@@ -7,11 +7,20 @@
 
 #include <iostream>
 
+class DataBuffers: public std::vector<data_buffer_t*> {
+public:
+  ~DataBuffers() {
+    for (auto buf : *this) {
+      delete buf;
+    }
+  }
+};
+
 void copy_root_tree(TTree& tt, H5::CommonFG& fg) {
   const std::string tree_name = tt.GetName();
 
   // note: this leaks memory!
-  std::vector<data_buffer_t*> buffer;
+  DataBuffers buffer;
   std::set<std::string> skipped;
 
   TIter next(tt.GetListOfLeaves());
