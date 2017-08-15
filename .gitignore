@@ -1,0 +1,24 @@
+# common file types
+*.root
+*.h5
+*.json
+*.txt
+*.pdf
+*.png
+*.tgz
+*.pcm
+
+# mac shit
+.DS_Store
+
+# python shit
+__pycache__
+
+# directories
+/build/
+/bin/
+/dict/
+/test/
+/plots/
+/run/
+/*-files
