@@ -3,10 +3,12 @@
 #include "H5Cpp.h"
 
 
+template<>
 data_buffer_t get_buffer(const std::function<int()>& func) {
   return {._int = func()};
 }
 
+template<>
 data_buffer_t get_buffer(const std::function<float()>& func) {
   return {._float = func()};
 }
@@ -36,8 +38,8 @@ namespace {
 
 // 1d writter
 Writer::Writer(H5::CommonFG& group, const std::string& name,
-               std::vector<IVariableFiller*> fillers, hsize_t batch_size):
-  _type(),
+               VariableFillers fillers, hsize_t batch_size):
+  _type(fillers.size() * sizeof(data_buffer_t)),
   _batch_size(batch_size),
   _offset(0),
   _fillers(fillers)
@@ -58,8 +60,8 @@ Writer::Writer(H5::CommonFG& group, const std::string& name,
 
   // build up type
   size_t dt_offset = 0;
-  for (const auto* filler: fillers) {
-    _type.insertMember(filler->name(), dt_offset, filler->get_type());
+  for (const auto& filler: fillers) {
+    _type.insertMember((filler)->name(), dt_offset, (filler)->get_type());
     dt_offset += sizeof(data_buffer_t);
   }
 
@@ -68,9 +70,9 @@ Writer::Writer(H5::CommonFG& group, const std::string& name,
 }
 
 Writer::~Writer() {
-  for (auto filler: _fillers) {
-    delete filler;
-  }
+  // for (auto filler: _fillers) {
+  //   delete filler;
+  // }
 }
 
 void Writer::fill() {
@@ -78,8 +80,8 @@ void Writer::fill() {
     flush();
   }
   // todo: make sure we don't insert unless everything is pushed
-  for (const auto* filler: _fillers) {
-    _buffer.push_back(filler->get_buffer());
+  for (const auto& filler: _fillers) {
+    _buffer.push_back((filler)->get_buffer());
   }
 }
 

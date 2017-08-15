@@ -34,7 +34,7 @@ public:
 };
 
 template <typename T>
-class VariableFiller: IVariableFiller
+class VariableFiller: public IVariableFiller
 {
 public:
   VariableFiller(const std::string&, const std::function<T()>&);
@@ -67,6 +67,9 @@ std::string VariableFiller<T>::name() const {
   return _name;
 }
 
+// typedef std::vector<std::unique_ptr<IVariableFiller*> > VariableFillers;
+typedef std::vector<IVariableFiller*> VariableFillers;
+
 // ___________________________________________________________________
 // writer
 
@@ -74,12 +77,10 @@ class Writer
 {
 public:
   Writer(H5::CommonFG& out_file, const std::string& name,
-         std::vector<IVariableFiller*> fillers, hsize_t batch_size = 1000);
+         VariableFillers fillers, hsize_t batch_size = 1000);
   Writer(const Writer&) = delete;
   Writer& operator=(Writer&) = delete;
   ~Writer();
-  template <typename T>
-  void add_getter(const std::function<T()>&);
   void fill();
   void flush();
   void close();
@@ -89,13 +90,8 @@ private:
   hsize_t _batch_size;
   hsize_t _offset;
   std::vector<data_buffer_t> _buffer;
-  std::vector<IVariableFiller*> _fillers;
+  VariableFillers _fillers;
   H5::DataSet _ds;
 };
-
-template <typename T>
-void Writer::add_getter(const std::function<T()>& func) {
-  _fillers.push_back(func);
-}
 
 #endif
