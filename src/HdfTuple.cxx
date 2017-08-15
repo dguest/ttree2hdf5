@@ -12,6 +12,14 @@ template<>
 data_buffer_t get_buffer(const std::function<float()>& func) {
   return {._float = func()};
 }
+template<>
+data_buffer_t get_buffer(const std::function<double()>& func) {
+  return {._double = func()};
+}
+template<>
+data_buffer_t get_buffer(const std::function<bool()>& func) {
+  return {._bool = func()};
+}
 
 template<>
 H5::DataType get_type<float>() {
@@ -20,6 +28,19 @@ H5::DataType get_type<float>() {
 template<>
 H5::DataType get_type<int>() {
   return H5::PredType::NATIVE_INT;
+}
+template<>
+H5::DataType get_type<double>() {
+  return H5::PredType::NATIVE_DOUBLE;
+}
+template<>
+H5::DataType get_type<bool>() {
+  bool TRUE = true;
+  bool FALSE = false;
+  H5::EnumType btype(sizeof(bool));
+  btype.insert("TRUE", &TRUE);
+  btype.insert("FALSE", &FALSE);
+  return btype;
 }
 
 

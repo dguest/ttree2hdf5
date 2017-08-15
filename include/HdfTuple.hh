@@ -8,8 +8,10 @@
 
 union data_buffer_t
 {
-  float _float;
   int _int;
+  float _float;
+  double _double;
+  bool _bool;
 };
 
 // _____________________________________________________________________
@@ -18,10 +20,14 @@ union data_buffer_t
 template <typename T> data_buffer_t get_buffer(const std::function<T()>&);
 template<> data_buffer_t get_buffer(const std::function<int()>&);
 template<> data_buffer_t get_buffer(const std::function<float()>&);
+template<> data_buffer_t get_buffer(const std::function<double()>&);
+template<> data_buffer_t get_buffer(const std::function<bool()>&);
 
 template <typename T> H5::DataType get_type();
-template<> H5::DataType get_type<float>();
 template<> H5::DataType get_type<int>();
+template<> H5::DataType get_type<float>();
+template<> H5::DataType get_type<double>();
+template<> H5::DataType get_type<bool>();
 
 // variable filler class
 class IVariableFiller
@@ -67,8 +73,20 @@ std::string VariableFiller<T>::name() const {
   return _name;
 }
 
-// typedef std::vector<std::unique_ptr<IVariableFiller*> > VariableFillers;
-typedef std::vector<IVariableFiller*> VariableFillers;
+class VariableFillers: public std::vector<std::shared_ptr<IVariableFiller> >
+{
+public:
+  template <typename T>
+  void add(const std::string& name, const std::function<T()>&);
+};
+
+template <typename T>
+void VariableFillers::add(const std::string& name,
+                             const std::function<T()>& fun) {
+  this->push_back(std::make_shared<VariableFiller<T> >(name, fun));
+}
+
+// typedef std::vector<IVariableFiller*> VariableFillers;
 
 // ___________________________________________________________________
 // writer
