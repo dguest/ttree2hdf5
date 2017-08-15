@@ -15,7 +15,9 @@ union data_buffer_t
 };
 
 // _____________________________________________________________________
-// internal templates
+// internal classes
+
+// these guys are defined in the cxx file
 
 template <typename T> data_buffer_t get_buffer(const std::function<T()>&);
 template<> data_buffer_t get_buffer(const std::function<int()>&);
@@ -29,7 +31,9 @@ template<> H5::DataType get_type<float>();
 template<> H5::DataType get_type<double>();
 template<> H5::DataType get_type<bool>();
 
-// variable filler class
+
+
+// variable filler class header
 class IVariableFiller
 {
 public:
@@ -39,6 +43,7 @@ public:
   virtual std::string name() const = 0;
 };
 
+// implementation for variable filler
 template <typename T>
 class VariableFiller: public IVariableFiller
 {
@@ -51,7 +56,6 @@ private:
   std::function<T()> _getter;
   std::string _name;
 };
-
 template <typename T>
 VariableFiller<T>::VariableFiller(const std::string& name,
                                   const std::function<T()>& func):
@@ -59,7 +63,6 @@ VariableFiller<T>::VariableFiller(const std::string& name,
   _name(name)
 {
 }
-
 template <typename T>
 data_buffer_t VariableFiller<T>::get_buffer() const {
   return ::get_buffer<T>(_getter);
@@ -72,6 +75,13 @@ template <typename T>
 std::string VariableFiller<T>::name() const {
   return _name;
 }
+
+
+
+// _________________________________________________________________________
+// the class that holds the variable fillers
+//
+// (this is what you actually interact with)
 
 class VariableFillers: public std::vector<std::shared_ptr<IVariableFiller> >
 {
@@ -86,10 +96,12 @@ void VariableFillers::add(const std::string& name,
   this->push_back(std::make_shared<VariableFiller<T> >(name, fun));
 }
 
-// typedef std::vector<IVariableFiller*> VariableFillers;
+
 
 // ___________________________________________________________________
-// writer
+// writer class
+//
+// (this is another thing you interact with)
 
 class Writer
 {
