@@ -5,6 +5,7 @@
 
 #include <functional>
 #include <vector>
+#include <memory>
 
 union data_buffer_t
 {
