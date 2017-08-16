@@ -17,14 +17,8 @@ union data_buffer_t
 
 // _____________________________________________________________________
 // internal classes
-
+//
 // these guys are defined in the cxx file
-
-template <typename T> data_buffer_t get_buffer(const std::function<T()>&);
-template<> data_buffer_t get_buffer(const std::function<int()>&);
-template<> data_buffer_t get_buffer(const std::function<float()>&);
-template<> data_buffer_t get_buffer(const std::function<double()>&);
-template<> data_buffer_t get_buffer(const std::function<bool()>&);
 
 template <typename T> H5::DataType get_type();
 template<> H5::DataType get_type<int>();
@@ -32,7 +26,21 @@ template<> H5::DataType get_type<float>();
 template<> H5::DataType get_type<double>();
 template<> H5::DataType get_type<bool>();
 
+template <typename T>
+T& get_ref(data_buffer_t& buf);
+template<> int& get_ref<int>(data_buffer_t& buf);
+template<> float& get_ref<float>(data_buffer_t& buf);
+template<> double& get_ref<double>(data_buffer_t& buf);
+template<> bool& get_ref<bool>(data_buffer_t& buf);
 
+// this is used to buld the unions we use to build the hdf5 memory
+// buffer
+template <typename T>
+data_buffer_t get_buffer_from_func(const std::function<T()>& func) {
+  data_buffer_t buffer;
+  get_ref<T>(buffer) = func();
+  return buffer;
+}
 
 // variable filler class header
 class IVariableFiller
@@ -40,6 +48,7 @@ class IVariableFiller
 public:
   virtual ~IVariableFiller() {}
   virtual data_buffer_t get_buffer() const = 0;
+  virtual data_buffer_t get_empty() const = 0;
   virtual H5::DataType get_type() const = 0;
   virtual std::string name() const = 0;
 };
@@ -51,6 +60,7 @@ class VariableFiller: public IVariableFiller
 public:
   VariableFiller(const std::string&, const std::function<T()>&);
   data_buffer_t get_buffer() const;
+  data_buffer_t get_empty() const;
   H5::DataType get_type() const;
   std::string name() const;
 private:
@@ -66,7 +76,13 @@ VariableFiller<T>::VariableFiller(const std::string& name,
 }
 template <typename T>
 data_buffer_t VariableFiller<T>::get_buffer() const {
-  return ::get_buffer<T>(_getter);
+  return ::get_buffer_from_func<T>(_getter);
+}
+template <typename T>
+data_buffer_t VariableFiller<T>::get_empty() const {
+  data_buffer_t buffer;
+  get_ref<T>(buffer) = 0;
+  return buffer;
 }
 template <typename T>
 H5::DataType VariableFiller<T>::get_type() const {
@@ -111,7 +127,6 @@ public:
          VariableFillers fillers, hsize_t batch_size = 1000);
   Writer(const Writer&) = delete;
   Writer& operator=(Writer&) = delete;
-  ~Writer();
   void fill();
   void flush();
   void close();
@@ -124,5 +139,28 @@ private:
   VariableFillers _fillers;
   H5::DataSet _ds;
 };
+
+
+class Writer2d {
+public:
+  Writer2d(H5::CommonFG& group, const std::string& name,
+           VariableFillers fillers,
+           hsize_t max_length, hsize_t batch_size = 1000);
+  Writer2d(const Writer2d&) = delete;
+  Writer2d& operator=(Writer2d&) = delete;
+  void fill_while_incrementing(size_t& index, const size_t& size);
+  void flush();
+  void close();
+private:
+  hsize_t buffer_size() const;
+  H5::CompType _type;
+  hsize_t _max_length;
+  hsize_t _batch_size;
+  hsize_t _offset;
+  std::vector<data_buffer_t> _buffer;
+  VariableFillers _fillers;
+  H5::DataSet _ds;
+};
+
 
 #endif

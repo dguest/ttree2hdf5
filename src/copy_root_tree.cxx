@@ -16,28 +16,13 @@ public:
   }
 };
 
-// functions to convert union types back to whatever they are
-template <typename T>
-T& get_ref(data_buffer_t* buf);
-template<> int& get_ref<int>(data_buffer_t* buf) {
-  return buf->_int;
-}
-template<> float& get_ref<float>(data_buffer_t* buf) {
-  return buf->_float;
-}
-template<> double& get_ref<double>(data_buffer_t* buf) {
-  return buf->_double;
-}
-template<> bool& get_ref<bool>(data_buffer_t* buf) {
-  return buf->_bool;
-}
 
 // copy function
 template <typename T>
 void set_branch(VariableFillers& vars, TTree& tt, DataBuffers& buffer,
                 const std::string& name) {
   buffer.push_back(new data_buffer_t);
-  T& buf = get_ref<T>(buffer.back());
+  T& buf = get_ref<T>(*buffer.back());
   tt.SetBranchAddress(name.c_str(), &buf);
   vars.add<T>(name, [&buf](){return buf;});
 }
