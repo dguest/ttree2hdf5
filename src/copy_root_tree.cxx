@@ -50,10 +50,14 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg) {
   std::set<std::string> skipped;
 
   TIter next(tt.GetListOfLeaves());
-  VariableFillers vars;
   TLeaf* leaf;
+  std::set<std::string> leaf_names;
   while ((leaf = dynamic_cast<TLeaf*>(next()))) {
-    std::string leaf_name = leaf->GetName();
+    leaf_names.insert(leaf->GetName());
+  }
+  VariableFillers vars;
+  for (const auto& leaf_name: leaf_names) {
+    leaf = tt.GetLeaf(leaf_name.c_str());
     std::string leaf_type = leaf->GetTypeName();
     if (leaf_type == "Int_t") {
       set_branch<int>(vars, tt, buffer, leaf_name);
