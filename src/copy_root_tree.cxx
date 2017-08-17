@@ -38,6 +38,7 @@ class VBuf: public IBuffer
 public:
   VBuf(VariableFillers& vars, size_t& idx, TTree& tt,
        const std::string& name, T default_value = T());
+  ~VBuf();
 private:
   std::vector<T>* _buffer;
 };
@@ -57,7 +58,10 @@ VBuf<T>::VBuf(VariableFillers& vars, size_t& idx, TTree& tt,
   };
   vars.add<T>(name, filler);
 }
-
+template <typename T>
+VBuf<T>::~VBuf() {
+  delete _buffer;
+}
 
 
 // main function to do all the things
