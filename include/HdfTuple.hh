@@ -141,20 +141,22 @@ private:
 };
 
 
-class Writer2d {
+class WriterXd {
 public:
-  Writer2d(H5::CommonFG& group, const std::string& name,
+  WriterXd(H5::CommonFG& group, const std::string& name,
            VariableFillers fillers,
-           hsize_t max_length, hsize_t chunk_size = 2048);
-  Writer2d(const Writer2d&) = delete;
-  Writer2d& operator=(Writer2d&) = delete;
+           std::vector<hsize_t> max_lengths,
+           hsize_t chunk_size = 2048);
+  WriterXd(const WriterXd&) = delete;
+  WriterXd& operator=(WriterXd&) = delete;
   void fill_while_incrementing(size_t& index, const size_t& size);
   void flush();
   void close();
 private:
   hsize_t buffer_size() const;
   H5::CompType _type;
-  hsize_t _max_length;
+  std::vector<hsize_t> _max_length;
+  std::vector<hsize_t> _dim_stride;
   hsize_t _batch_size;
   hsize_t _offset;
   std::vector<data_buffer_t> _buffer;

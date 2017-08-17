@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
 
   // create the writers
   Writer writer(file, "thing", vars, 256);
-  Writer2d writer2(file, "thing2", vars, 10, 256);
+  WriterXd writer2(file, "thing2", vars, {10}, 256);
 
   // fill file
   for (; xxx < 1000; xxx++) {
