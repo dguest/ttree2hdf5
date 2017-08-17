@@ -11,7 +11,7 @@
 // todo, use boost program options or something else that doesn't suck
 // for option parsing.
 void usage(const char* prog) {
-  printf("usage: %s <root-file> <output-file-name> [length=0..]\n", prog);
+  printf("usage: %s <root-file> <output-file-name> [length..]\n", prog);
 }
 
 const size_t CHUNK_SIZE = 128;

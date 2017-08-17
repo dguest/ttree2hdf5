@@ -124,27 +124,29 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
   // 3d vars
   VariableFillers vars3d;
   std::vector<size_t> idx2(2,0);
-  for (const auto& leaf_name: leaf_names) {
-    leaf = tt.GetLeaf(leaf_name.c_str());
+  for (const auto& lname: leaf_names) {
+    leaf = tt.GetLeaf(lname.c_str());
     std::string leaf_type = leaf->GetTypeName();
     if (leaf_type == "Int_t") {
-      buffers.emplace_back(new Buffer<int>(vars, tt, leaf_name));
+      buffers.emplace_back(new Buffer<int>(vars, tt, lname));
     } else if (leaf_type == "Float_t") {
-      buffers.emplace_back(new Buffer<float>(vars, tt, leaf_name));
+      buffers.emplace_back(new Buffer<float>(vars, tt, lname));
     } else if (leaf_type == "Double_t") {
-      buffers.emplace_back(new Buffer<double>(vars, tt, leaf_name));
+      buffers.emplace_back(new Buffer<double>(vars, tt, lname));
     } else if (leaf_type == "Bool_t") {
-      buffers.emplace_back(new Buffer<bool>(vars, tt, leaf_name));
+      buffers.emplace_back(new Buffer<bool>(vars, tt, lname));
     } else if (leaf_type == "vector<float>") {
-      buffers.emplace_back(new VBuf<float>(vars2d, idx, tt, leaf_name, NAN));
+      buffers.emplace_back(new VBuf<float>(vars2d, idx, tt, lname, NAN));
     } else if (leaf_type == "vector<double>") {
-      buffers.emplace_back(new VBuf<double>(vars2d, idx, tt, leaf_name, NAN));
+      buffers.emplace_back(new VBuf<double>(vars2d, idx, tt, lname, NAN));
     } else if (leaf_type == "vector<int>") {
-      buffers.emplace_back(new VBuf<int>(vars2d, idx, tt, leaf_name, 0));
+      buffers.emplace_back(new VBuf<int>(vars2d, idx, tt, lname, 0));
     } else if (leaf_type == "vector<vector<int> >") {
-      buffers.emplace_back(new VVBuf<int>(vars3d, idx2, tt, leaf_name, 0));
+      buffers.emplace_back(new VVBuf<int>(vars3d, idx2, tt, lname, 0));
     } else if (leaf_type == "vector<vector<float> >") {
-      buffers.emplace_back(new VVBuf<float>(vars3d, idx2, tt, leaf_name, NAN));
+      buffers.emplace_back(new VVBuf<float>(vars3d, idx2, tt, lname, NAN));
+    } else if (leaf_type == "vector<vector<double> >") {
+      buffers.emplace_back(new VVBuf<double>(vars3d, idx2, tt, lname, NAN));
     } else {
       skipped.insert(leaf_type);
     }
