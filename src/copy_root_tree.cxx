@@ -5,33 +5,39 @@
 #include "TTree.h"
 #include "TLeaf.h"
 
+#include <memory>
+
 #include <iostream>
 
-class DataBuffers: public std::vector<data_buffer_t*> {
+class IBuffer
+{
 public:
-  ~DataBuffers() {
-    for (auto buf : *this) {
-      delete buf;
-    }
-  }
+  virtual ~IBuffer() {}
 };
 
-
-// copy function
 template <typename T>
-void set_branch(VariableFillers& vars, TTree& tt, DataBuffers& buffer,
-                const std::string& name) {
-  buffer.push_back(new data_buffer_t);
-  T& buf = get_ref<T>(*buffer.back());
-  tt.SetBranchAddress(name.c_str(), &buf);
+class Buffer: public IBuffer
+{
+public:
+  Buffer(VariableFillers& vars, TTree& tt, const std::string& name);
+private:
+  T _buffer;
+};
+template <typename T>
+Buffer<T>::Buffer(VariableFillers& vars, TTree& tt,
+                  const std::string& name)
+{
+  tt.SetBranchAddress(name.c_str(), &_buffer);
+  T& buf = _buffer;
   vars.add<T>(name, [&buf](){return buf;});
 }
+
 
 // main function to do all the things
 void copy_root_tree(TTree& tt, H5::CommonFG& fg) {
   const std::string tree_name = tt.GetName();
 
-  DataBuffers buffer;
+  std::vector<std::unique_ptr<IBuffer> > buffer_vec;
   std::set<std::string> skipped;
 
   TIter next(tt.GetListOfLeaves());
@@ -45,13 +51,13 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg) {
     leaf = tt.GetLeaf(leaf_name.c_str());
     std::string leaf_type = leaf->GetTypeName();
     if (leaf_type == "Int_t") {
-      set_branch<int>(vars, tt, buffer, leaf_name);
+      buffer_vec.emplace_back(new Buffer<int>(vars, tt, leaf_name));
     } else if (leaf_type == "Float_t") {
-      set_branch<float>(vars, tt, buffer, leaf_name);
+      buffer_vec.emplace_back(new Buffer<float>(vars, tt, leaf_name));
     } else if (leaf_type == "Double_t") {
-      set_branch<double>(vars, tt, buffer, leaf_name);
+      buffer_vec.emplace_back(new Buffer<double>(vars, tt, leaf_name));
     } else if (leaf_type == "Bool_t") {
-      set_branch<bool>(vars, tt, buffer, leaf_name);
+      buffer_vec.emplace_back(new Buffer<bool>(vars, tt, leaf_name));
     } else {
       skipped.insert(leaf_type);
     }
