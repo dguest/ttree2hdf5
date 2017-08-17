@@ -48,7 +48,6 @@ class IVariableFiller
 public:
   virtual ~IVariableFiller() {}
   virtual data_buffer_t get_buffer() const = 0;
-  virtual data_buffer_t get_empty() const = 0;
   virtual H5::DataType get_type() const = 0;
   virtual std::string name() const = 0;
 };
@@ -60,7 +59,6 @@ class VariableFiller: public IVariableFiller
 public:
   VariableFiller(const std::string&, const std::function<T()>&);
   data_buffer_t get_buffer() const;
-  data_buffer_t get_empty() const;
   H5::DataType get_type() const;
   std::string name() const;
 private:
@@ -77,12 +75,6 @@ VariableFiller<T>::VariableFiller(const std::string& name,
 template <typename T>
 data_buffer_t VariableFiller<T>::get_buffer() const {
   return ::get_buffer_from_func<T>(_getter);
-}
-template <typename T>
-data_buffer_t VariableFiller<T>::get_empty() const {
-  data_buffer_t buffer;
-  get_ref<T>(buffer) = 0;
-  return buffer;
 }
 template <typename T>
 H5::DataType VariableFiller<T>::get_type() const {
