@@ -151,7 +151,7 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
   }
 
   // build outputs
-  std::unique_ptr<Writer> writer1d;
+  std::unique_ptr<WriterXd> writer1d;
   std::unique_ptr<WriterXd> writer2d;
   std::unique_ptr<WriterXd> writer3d;
   std::unique_ptr<H5::Group> top_group;
@@ -163,16 +163,16 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
     }
     writer2d.reset(new WriterXd(*top_group, "2d", vars2d,
                                 {length}, chunk_size));
-    writer1d.reset(new Writer(*top_group, "1d", vars, chunk_size));
+    writer1d.reset(new WriterXd(*top_group, "1d", vars, {}, chunk_size));
   } else {
-    writer1d.reset(new Writer(fg, tree_name, vars, chunk_size));
+    writer1d.reset(new WriterXd(fg, tree_name, vars, {}, chunk_size));
   }
 
   // fill outputs
   size_t n_entries = tt.GetEntries();
   for (size_t iii = 0; iii < n_entries; iii++) {
     tt.GetEntry(iii);
-    writer1d->fill();
+    writer1d->fill_while_incrementing();
     if (writer2d) writer2d->fill_while_incrementing(idx);
     if (writer3d) writer3d->fill_while_incrementing(idx2);
   }

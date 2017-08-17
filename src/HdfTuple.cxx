@@ -61,74 +61,7 @@ namespace {
 }
 
 // _______________________________________________________________________
-// 1d writter
-//
-Writer::Writer(H5::CommonFG& group, const std::string& name,
-               VariableFillers fillers, hsize_t batch_size):
-  _type(fillers.size() * sizeof(data_buffer_t)),
-  _batch_size(batch_size),
-  _offset(0),
-  _fillers(fillers)
-{
-  if (batch_size < 1) {
-    throw std::logic_error("batch size must be > 0");
-  }
-  // create space
-  hsize_t initial[1] = {0};
-  hsize_t eventual[1] = {H5S_UNLIMITED};
-  H5::DataSpace space(1, initial, eventual);
-
-  // create params
-  H5::DSetCreatPropList params;
-  hsize_t chunk_size[1] = {batch_size};
-  params.setChunk(1, chunk_size);
-  params.setDeflate(7);
-
-  // build up type
-  build_type(_type, fillers);
-
-  // create ds
-  _ds = group.createDataSet(name, packed(_type), space, params);
-}
-
-void Writer::fill() {
-  if (buffer_size() == _batch_size) {
-    flush();
-  }
-  // todo: make sure we don't insert unless everything is pushed
-  for (const auto& filler: _fillers) {
-    _buffer.push_back((filler)->get_buffer());
-  }
-}
-
-void Writer::flush() {
-  if (buffer_size() == 0) return;
-  // extend the ds
-  hsize_t slab_dims[1] = {buffer_size()};
-  hsize_t total_dims[1] = {buffer_size() + _offset};
-  _ds.extend(total_dims);
-
-  // setup dataspaces
-  H5::DataSpace file_space = _ds.getSpace();
-  H5::DataSpace mem_space(1, slab_dims);
-  hsize_t offset_dims[1] = {_offset};
-  file_space.selectHyperslab(H5S_SELECT_SET, slab_dims, offset_dims);
-
-  // write out
-  _ds.write(_buffer.data(), _type, mem_space, file_space);
-  _offset += buffer_size();
-  _buffer.clear();
-}
-void Writer::close() {
-  _ds.close();
-}
-hsize_t Writer::buffer_size() const {
-  return _buffer.size() / _fillers.size();
-}
-
-
-// _______________________________________________________________________
-// 2d writter
+// Xd writter
 //
 
 std::vector<size_t> WriterXd::dummy = {};

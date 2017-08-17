@@ -120,27 +120,6 @@ void VariableFillers::add(const std::string& name,
 //
 // (this is another thing you interact with)
 
-class Writer
-{
-public:
-  Writer(H5::CommonFG& out_file, const std::string& name,
-         VariableFillers fillers, hsize_t chunk_size = 2048);
-  Writer(const Writer&) = delete;
-  Writer& operator=(Writer&) = delete;
-  void fill();
-  void flush();
-  void close();
-private:
-  hsize_t buffer_size() const;
-  H5::CompType _type;
-  hsize_t _batch_size;
-  hsize_t _offset;
-  std::vector<data_buffer_t> _buffer;
-  VariableFillers _fillers;
-  H5::DataSet _ds;
-};
-
-
 class WriterXd {
 public:
   WriterXd(H5::CommonFG& group, const std::string& name,
