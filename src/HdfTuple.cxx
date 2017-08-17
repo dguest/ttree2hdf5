@@ -3,8 +3,6 @@
 #include "H5Cpp.h"
 
 #include <cassert>
-#include <functional>
-#include <numeric>
 
 template<>
 H5::DataType get_type<float>() {
@@ -133,6 +131,7 @@ hsize_t Writer::buffer_size() const {
 // 2d writter
 //
 
+std::vector<size_t> WriterXd::dummy = {};
 
 WriterXd::WriterXd(H5::CommonFG& group, const std::string& name,
                    VariableFillers fillers,
@@ -163,8 +162,10 @@ WriterXd::WriterXd(H5::CommonFG& group, const std::string& name,
   params.setDeflate(7);
 
   // calculate striding
-  std::accumulate(max_length.begin(), max_length.end(),
-                  1, std::multiplies<hsize_t>());
+  _dim_stride.push_back(1);
+  for (size_t iii = _dim_stride.size(); iii - 1 != 0; iii--) {
+    _dim_stride.at(iii-2) = _dim_stride.at(iii-2) * _dim_stride.at(iii-1);
+  }
 
   // build up type
   build_type(_type, fillers);
@@ -176,21 +177,22 @@ WriterXd::WriterXd(H5::CommonFG& group, const std::string& name,
 // TODO: figure out if we really need this `size` here. Instead we
 // could just increment to the max length and let the getter functions
 // sort out the "out of range" values.
-void WriterXd::fill_while_incrementing(size_t& index, const size_t& size) {
+void WriterXd::fill_while_incrementing(std::vector<size_t>& indices) {
   if (buffer_size() == _batch_size) {
     flush();
   }
+  indices.resize(_max_length.size());
   // todo: build buffer and _then_ insert it so that exceptions
   // don't leave the buffer in a weird state
-  for (index = 0; index < _max_length.at(0); index++) {
-    if (index < size) {
-      for (const auto& filler: _fillers) {
-        _buffer.push_back(filler->get_buffer());
-      }
-    } else {
-      for (const auto& filler: _fillers) {
-        _buffer.push_back(filler->get_empty());
-      }
+  std::fill(indices.begin(), indices.end(), 0);
+  for (size_t gidx = 0; gidx < _dim_stride.front(); gidx++) {
+
+    for (size_t iii = 0; iii < indices.size(); iii++) {
+      indices.at(iii) = (gidx % _dim_stride.at(iii)) / _dim_stride.at(iii+1);
+    }
+
+    for (const auto& filler: _fillers) {
+      _buffer.push_back(filler->get_buffer());
     }
   }
 }
@@ -207,7 +209,7 @@ void WriterXd::flush() {
   H5::DataSpace file_space = _ds.getSpace();
   H5::DataSpace mem_space(slab_dims.size(), slab_dims.data());
   std::vector<hsize_t> offset_dims{_offset};
-  offset_dims.resize(1 + slab_dims.size(), 0);
+  offset_dims.resize(slab_dims.size(), 0);
   file_space.selectHyperslab(H5S_SELECT_SET,
                              slab_dims.data(), offset_dims.data());
 
@@ -222,7 +224,7 @@ void WriterXd::close() {
 
 hsize_t WriterXd::buffer_size() const {
   size_t n_entries = _buffer.size() / _fillers.size();
-  assert(n_entries % _dim_stride.back() == 0);
-  return n_entries / _dim_stride.back();
+  assert(n_entries % _dim_stride.front() == 0);
+  return n_entries / _dim_stride.front();
 }
 

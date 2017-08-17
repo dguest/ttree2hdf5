@@ -149,10 +149,11 @@ public:
            hsize_t chunk_size = 2048);
   WriterXd(const WriterXd&) = delete;
   WriterXd& operator=(WriterXd&) = delete;
-  void fill_while_incrementing(size_t& index, const size_t& size);
+  void fill_while_incrementing(std::vector<size_t>& index = WriterXd::dummy);
   void flush();
   void close();
 private:
+  static std::vector<size_t> dummy;
   hsize_t buffer_size() const;
   H5::CompType _type;
   std::vector<hsize_t> _max_length;

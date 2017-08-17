@@ -54,6 +54,17 @@ GEN_OBJ_PATHS := $(filter-out $(BUILD)/$(EXE_PREFIX)%.o,$(GEN_OBJ_PATHS))
 ALL_TOP_LEVEL += $(ALL_EXE_PATHS)
 
 # _______________________________________________________________
+# Add ROOT dicts
+
+# Edit `DICT_FILES` if you want to add more dictionaries
+DICT_FILES     := $(INC)/Stl.h
+TDICTS         := $(notdir $(DICT_FILES:.h=Dict.o))
+TDICT_PATHS    := $(TDICTS:%=$(BUILD)/%)
+GEN_OBJ_PATHS  += $(TDICT_PATHS)
+# prevent auto-deletion of dictionary objects
+.SECONDARY: $(TDICT_PATHS)
+
+# _______________________________________________________________
 # Add Libraries
 
 # --- load in root config
@@ -94,6 +105,19 @@ $(BUILD)/%.o: %.cxx
 	@echo compiling $<
 	@mkdir -p $(BUILD)
 	@$(CXX) -c $(CXXFLAGS) $< -o $@
+
+# --- ROOT dictionary generation
+LINKDEF := $(INC)/LinkDef.h
+$(DICT)/%Dict.cxx: %.h $(LINKDEF)
+	@echo making dict $@
+	@mkdir -p $(DICT)
+	@rm -f $(DICT)/$*Dict.h $(DICT)/$*Dict.cxx
+	@rootcint -f $@ -c -I$(INC) $(INC)/$*.h $(LINKDEF)
+
+$(BUILD)/%Dict.o: $(DICT)/%Dict.cxx
+	@mkdir -p $(BUILD)
+	@echo compiling dict $@
+	@$(CXX) -I. $(CXXFLAGS) $(ROOTCFLAGS) -c $< -o $@ 2> /dev/null
 
 # use auto dependency generation
 ALLOBJ       := $(GEN_OBJ)
