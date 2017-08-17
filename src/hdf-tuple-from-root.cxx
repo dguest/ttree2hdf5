@@ -8,22 +8,30 @@
 #include "TFile.h"
 #include "TTree.h"
 
+// todo, use boost program options or something else that doesn't suck
+// for option parsing.
 void usage(const char* prog) {
-  printf("usage: %s <root-file> <output-file-name>\n", prog);
+  printf("usage: %s <root-file> <output-file-name> [length=0]\n", prog);
 }
+
+const size_t CHUNK_SIZE = 128;
 
 int main(int argc, char* argv[]) {
   unshittify();
-  if (argc != 3) {
+  if (argc != 3 && argc != 4) {
     usage(argv[0]);
     return 1;
   }
   TFile file(argv[1]);
   TTree* tree = dynamic_cast<TTree*>(file.Get(get_tree(argv[1]).c_str()));
-
+  if (!tree) {
+    throw std::logic_error("no tree found");
+  }
+  size_t length = 0;            // no 2d written by default
+  if (argc == 4) length = atoi(argv[3]);
   // make the output file
   H5::H5File out_file(argv[2], H5F_ACC_TRUNC);
-  copy_root_tree(*tree, out_file);
+  copy_root_tree(*tree, out_file, length, CHUNK_SIZE);
 
   return 0;
 }

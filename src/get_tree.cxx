@@ -39,7 +39,7 @@ std::string get_tree(const std::string& file_name) {
   std::set<std::string> keys;
   int n_keys = file->GetListOfKeys()->GetSize();
   for (int keyn = 0; keyn < n_keys; keyn++) {
-    keys.insert(file->GetListOfKeys()->At(0)->GetName());
+    keys.insert(file->GetListOfKeys()->At(keyn)->GetName());
   }
   size_t n_unique = keys.size();
   if (n_unique > 1) {

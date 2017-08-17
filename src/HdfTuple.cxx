@@ -162,6 +162,9 @@ Writer2d::Writer2d(H5::CommonFG& group, const std::string& name,
   _ds = group.createDataSet(name, packed(_type), space, params);
 }
 
+// TODO: figure out if we really need this `size` here. Instead we
+// could just increment to the max length and let the getter functions
+// sort out the "out of range" values.
 void Writer2d::fill_while_incrementing(size_t& index, const size_t& size) {
   if (buffer_size() == _batch_size) {
     flush();

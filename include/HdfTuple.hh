@@ -124,7 +124,7 @@ class Writer
 {
 public:
   Writer(H5::CommonFG& out_file, const std::string& name,
-         VariableFillers fillers, hsize_t batch_size = 1000);
+         VariableFillers fillers, hsize_t chunk_size = 2048);
   Writer(const Writer&) = delete;
   Writer& operator=(Writer&) = delete;
   void fill();
@@ -145,7 +145,7 @@ class Writer2d {
 public:
   Writer2d(H5::CommonFG& group, const std::string& name,
            VariableFillers fillers,
-           hsize_t max_length, hsize_t batch_size = 1000);
+           hsize_t max_length, hsize_t chunk_size = 2048);
   Writer2d(const Writer2d&) = delete;
   Writer2d& operator=(Writer2d&) = delete;
   void fill_while_incrementing(size_t& index, const size_t& size);
