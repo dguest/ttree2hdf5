@@ -128,6 +128,17 @@ VVBuf<T>::~VVBuf() {
 // _____________________________________________________________________
 // main copy root tree function
 //
+// The basic workflow is as follows:
+//
+//  - Define the ROOT buffers that we'll read the information into
+//
+//  - At the same time, define functions that read out of these
+//    buffers and copy the information into the HDF5 buffer.
+//
+//  - Build the output HDF5 files
+//
+//  - Loop over the input tree and fill the output files
+//
 
 void copy_root_tree(TTree& tt, H5::CommonFG& fg,
                     size_t length, size_t length2,
@@ -135,16 +146,26 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
 
   // define the buffers for root to read into
   std::vector<std::unique_ptr<IBuffer> > buffers;
+
   // this keeps track of the things we couldn't read
   std::set<std::string> skipped;
 
-  // 1d variables to fill
+
+  // Each `VariableFiller` must be constructed with a "filler"
+  // function (or callable object), which takes no arguments and
+  // returns the variable we want to write out. In this case they are
+  // implemented as closures over the buffers that ROOT is reading
+  // into.
+
+  // This is the 1d variables
   VariableFillers vars;
 
-  // 2d variables to fill
+  // These are 2d variables (i.e. vector<T> in the root file)
+  //
+  // We also need an index which the HDF5 writer increments as it
+  // fills. This is shared with the ROOT buffers to index entries in
+  // std::vectors
   VariableFillers vars2d;
-  // The HDF5 writer increments this index, which is shared with the
-  // ROOT buffers to index entries in std::vectors
   std::vector<size_t> idx(1,0);
 
   // 3d variables (index is now 2d)
@@ -161,6 +182,8 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
   }
 
   // Loop over all the leafs, assign buffers to each
+  //
+  // These `Buffer` classes are defined above
   for (const auto& lname: leaf_names) {
     leaf = tt.GetLeaf(lname.c_str());
     std::string leaf_type = leaf->GetTypeName();
