@@ -8,4 +8,5 @@
 class Dummy {
   vector<vector<int> > vvi;
   vector<vector<float> > vvf;
+  vector<vector<double> > vvd;
 };

@@ -1,4 +1,14 @@
 #include "copy_root_tree.hh"
+
+// Root tree copy function
+//
+// NOTE: I don't recommend trying to understand the variable buffer
+// classes until you see the general workflow.
+//
+// The main work is done in copy_root_tree below, skip down to that to
+// understand what is going on.
+//
+
 #include "HdfTuple.hh"
 
 #include "TFile.h"
@@ -9,12 +19,27 @@
 
 #include <iostream>
 
+// ______________________________________________________________________
+// Variable buffer classes
+//
+// These classes hold pointers to the buffers that ROOT will read
+// into. They also define "filler" functions that the HDF5 writer will
+// call to read the buffer.
+//
+// Some of the filler functions close over an index vector. This
+// vector is incremented by the HDF5 Writer to read out successive
+// entires in a std::vector stored in the root file.
+//
+// If this all seems complicated, it's because it's the deep internals
+// of the code. Try to understand the copy_root_tree function first.
+
 class IBuffer
 {
 public:
   virtual ~IBuffer() {}
 };
 
+// Simple variables types are stored in the Buffer
 template <typename T>
 class Buffer: public IBuffer
 {
@@ -32,6 +57,7 @@ Buffer<T>::Buffer(VariableFillers& vars, TTree& tt,
   vars.add<T>(name, [&buf](){return buf;});
 }
 
+// Vector types
 template <typename T>
 class VBuf: public IBuffer
 {
@@ -63,6 +89,7 @@ VBuf<T>::~VBuf() {
   delete _buffer;
 }
 
+// Vectors of vectors
 template <typename T>
 class VVBuf: public IBuffer
 {
@@ -98,32 +125,42 @@ VVBuf<T>::~VVBuf() {
 }
 
 
+// _____________________________________________________________________
+// main copy root tree function
+//
 
-// main function to do all the things
 void copy_root_tree(TTree& tt, H5::CommonFG& fg,
                     size_t length, size_t length2,
                     size_t chunk_size) {
-  const std::string tree_name = tt.GetName();
 
+  // define the buffers for root to read into
   std::vector<std::unique_ptr<IBuffer> > buffers;
+  // this keeps track of the things we couldn't read
   std::set<std::string> skipped;
 
+  // 1d variables to fill
+  VariableFillers vars;
+
+  // 2d variables to fill
+  VariableFillers vars2d;
+  // The HDF5 writer increments this index, which is shared with the
+  // ROOT buffers to index entries in std::vectors
+  std::vector<size_t> idx(1,0);
+
+  // 3d variables (index is now 2d)
+  VariableFillers vars3d;
+  std::vector<size_t> idx2(2,0);
+
+  // Iterate over all the leaf names. There are some duplicates in the
+  // list of keys, so we have to build the set ourselves.
   TIter next(tt.GetListOfLeaves());
   TLeaf* leaf;
   std::set<std::string> leaf_names;
   while ((leaf = dynamic_cast<TLeaf*>(next()))) {
     leaf_names.insert(leaf->GetName());
   }
-  // 1d vars
-  VariableFillers vars;
 
-  // 2d vars
-  VariableFillers vars2d;
-  std::vector<size_t> idx(1,0);
-
-  // 3d vars
-  VariableFillers vars3d;
-  std::vector<size_t> idx2(2,0);
+  // Loop over all the leafs, assign buffers to each
   for (const auto& lname: leaf_names) {
     leaf = tt.GetLeaf(lname.c_str());
     std::string leaf_type = leaf->GetTypeName();
@@ -152,7 +189,15 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
     }
   }
 
-  // build outputs
+  // Build HDF5 Outputs
+  //
+  // In the simple case where we're not reading vectors, we store one
+  // dataset with the same name as the tree. If there are vectors, we
+  // instead create a group with the same name as the tree, and name
+  // the datasets 1d, 2d, etc.
+  //
+  const std::string tree_name = tt.GetName();
+
   std::unique_ptr<WriterXd> writer1d;
   std::unique_ptr<WriterXd> writer2d;
   std::unique_ptr<WriterXd> writer3d;
@@ -170,7 +215,11 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
     writer1d.reset(new WriterXd(fg, tree_name, vars, {}, chunk_size));
   }
 
-  // fill outputs
+  // Main event loop
+  //
+  // Very little actually happens here since the buffers are already
+  // defined, as are the HDF5 reader functions.
+  //
   size_t n_entries = tt.GetEntries();
   for (size_t iii = 0; iii < n_entries; iii++) {
     tt.GetEntry(iii);
@@ -178,17 +227,15 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
     if (writer2d) writer2d->fill_while_incrementing(idx);
     if (writer3d) writer3d->fill_while_incrementing(idx2);
   }
-  writer1d->flush();
-  writer1d->close();
-  if (writer2d) {
-    writer2d->flush();
-    writer2d->close();
-  }
-  if (writer3d) {
-    writer3d->flush();
-    writer3d->close();
-  }
 
+  // Close all the HDF5 files. This also flushes the memory buffers on
+  // the HDF5 side.
+  writer1d->close();
+  if (writer2d) writer2d->close();
+  if (writer3d) writer3d->close();
+
+  // Print the names of any classes that we were't able to read from
+  // the root file.
   for (const auto& name: skipped) {
     std::cerr << "skipped " << name << std::endl;
   }

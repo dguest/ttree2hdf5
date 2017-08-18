@@ -1,12 +1,19 @@
 #ifndef HDF_TUPLE_HH
 #define HDF_TUPLE_HH
 
+// HDF5 Tuple Writer
+//
+// Skip down to the `WriterXd` and `VariableFillers` classes below to
+// see the stuff that you'll have to interact with.
+
 #include "H5Cpp.h"
 
 #include <functional>
 #include <vector>
 #include <memory>
 
+// buffer used by the HDF5 library to store data which is about to be
+// written to disk
 union data_buffer_t
 {
   int _int;
@@ -18,7 +25,8 @@ union data_buffer_t
 // _____________________________________________________________________
 // internal classes
 //
-// these guys are defined in the cxx file
+// We have lots of code to get around HDF5's rather weak typing. These
+// templates are defined in the cxx file.
 
 template <typename T> H5::DataType get_type();
 template<> H5::DataType get_type<int>();
@@ -33,8 +41,9 @@ template<> float& get_ref<float>(data_buffer_t& buf);
 template<> double& get_ref<double>(data_buffer_t& buf);
 template<> bool& get_ref<bool>(data_buffer_t& buf);
 
-// this is used to buld the unions we use to build the hdf5 memory
-// buffer
+// This is used to buld the unions we use to build the hdf5 memory
+// buffer. Together with the `get_type` templates it gives us a
+// strongly typed HDF5 writer.
 template <typename T>
 data_buffer_t get_buffer_from_func(const std::function<T()>& func) {
   data_buffer_t buffer;
@@ -88,13 +97,19 @@ std::string VariableFiller<T>::name() const {
 
 
 // _________________________________________________________________________
-// the class that holds the variable fillers
+// The class that holds the variable fillers
 //
-// (this is what you actually interact with)
+// This is what you actually interact with. You need to give each
+// variable a name and a function that fills the variable. Note that
+// these functions have no inputs, but they can close over whatever
+// buffers you want to read from.
+//
+// For examples, see `copy_root_tree.cxx`
 
 class VariableFillers: public std::vector<std::shared_ptr<IVariableFiller> >
 {
 public:
+  // This should be the only method you need in this class
   template <typename T>
   void add(const std::string& name, const std::function<T()>&);
 };
@@ -110,21 +125,28 @@ void VariableFillers::add(const std::string& name,
 // ___________________________________________________________________
 // writer class
 //
-// (this is another thing you interact with)
+// This is the other thing you interact with.
+//
+// You'll have to specify the H5::Group to write the dataset to, the
+// name of the new dataset, and the extent of the dataset.
+//
+// To fill, use the `fill_while_incrementing` function, which will
+// iterate over all possible values of `indices` and call the filler
+// functions.
 
 class WriterXd {
 public:
   WriterXd(H5::CommonFG& group, const std::string& name,
            VariableFillers fillers,
-           std::vector<hsize_t> max_lengths,
+           std::vector<hsize_t> dataset_dimensions,
            hsize_t chunk_size = 2048);
   WriterXd(const WriterXd&) = delete;
   WriterXd& operator=(WriterXd&) = delete;
-  void fill_while_incrementing(std::vector<size_t>& index = WriterXd::dummy);
+  void fill_while_incrementing(std::vector<size_t>& indices = WriterXd::NONE);
   void flush();
   void close();
 private:
-  static std::vector<size_t> dummy;
+  static std::vector<size_t> NONE;
   hsize_t buffer_size() const;
   H5::CompType _type;
   std::vector<hsize_t> _max_length;

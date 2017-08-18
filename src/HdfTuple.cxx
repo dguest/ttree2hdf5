@@ -51,12 +51,14 @@ namespace {
     out.pack();
     return out;
   }
-  void build_type(H5::CompType& type, const VariableFillers& fillers) {
+  H5::CompType build_type(const VariableFillers& fillers) {
+    H5::CompType type(fillers.size() * sizeof(data_buffer_t));
     size_t dt_offset = 0;
     for (const auto& filler: fillers) {
       type.insertMember(filler->name(), dt_offset, filler->get_type());
       dt_offset += sizeof(data_buffer_t);
     }
+    return type;
   }
 }
 
@@ -64,13 +66,13 @@ namespace {
 // Xd writter
 //
 
-std::vector<size_t> WriterXd::dummy = {};
+std::vector<size_t> WriterXd::NONE = {};
 
 WriterXd::WriterXd(H5::CommonFG& group, const std::string& name,
                    VariableFillers fillers,
                    std::vector<hsize_t> max_length,
                    hsize_t batch_size):
-  _type(fillers.size() * sizeof(data_buffer_t)),
+  _type(build_type(fillers)),
   _max_length(max_length),
   _dim_stride(max_length),
   _batch_size(batch_size),
@@ -100,16 +102,10 @@ WriterXd::WriterXd(H5::CommonFG& group, const std::string& name,
     _dim_stride.at(iii-2) = _dim_stride.at(iii-2) * _dim_stride.at(iii-1);
   }
 
-  // build up type
-  build_type(_type, fillers);
-
   // create ds
   _ds = group.createDataSet(name, packed(_type), space, params);
 }
 
-// TODO: figure out if we really need this `size` here. Instead we
-// could just increment to the max length and let the getter functions
-// sort out the "out of range" values.
 void WriterXd::fill_while_incrementing(std::vector<size_t>& indices) {
   if (buffer_size() == _batch_size) {
     flush();
@@ -120,6 +116,7 @@ void WriterXd::fill_while_incrementing(std::vector<size_t>& indices) {
   std::fill(indices.begin(), indices.end(), 0);
   for (size_t gidx = 0; gidx < _dim_stride.front(); gidx++) {
 
+    // we might be able to make this more efficient and less cryptic
     for (size_t iii = 0; iii < indices.size(); iii++) {
       indices.at(iii) = (gidx % _dim_stride.at(iii)) / _dim_stride.at(iii+1);
     }
@@ -152,6 +149,7 @@ void WriterXd::flush() {
   _buffer.clear();
 }
 void WriterXd::close() {
+  flush();
   _ds.close();
 }
 

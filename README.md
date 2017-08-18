@@ -17,6 +17,22 @@ ttree2hdf5 <root-file> <output-file> [dims..]
 
 where the `[dims..]` argument can have up to two integers.
 
+Hacking This Code
+-----------------
+
+I've _tried_ to make this code as modular and straightforward as
+possible. Of course if anything is unclear you should
+[file an issue][1].
+
+The main algorithm `ttree2hdf5` is a thin wrapper on
+`copy_root_tree`. Reading the code in `src/copy_root_tree.cxx` should
+be a decent introduction to the higher level classes you'll need to
+interact with.
+
+As for compiling: anything in `src/` which starts with `ttree2hdf*`
+will compile into an executable by default, whereas anything in `src/`
+will compile and link to the executables by default.
+
 To Do
 -----
 
