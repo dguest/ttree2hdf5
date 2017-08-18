@@ -22,9 +22,14 @@
 // ______________________________________________________________________
 // Variable buffer classes
 //
-// These classes hold pointers to the buffers that ROOT will read
-// into. They also define "filler" functions that the HDF5 writer will
-// call to read the buffer.
+// These classes act as glue between HDF and ROOT: they hold pointers
+// to the buffers that ROOT will read into, and as such are
+// "ROOT-side" buffers.
+//
+// The constructors are given a reference to a `VariableFillers`
+// container, which contains the "HDF5-side" logic. Each of the
+// VariableFiller objects contains a "filler" function that the HDF5
+// writer will call to read from the ROOT buffer.
 //
 // Some of the filler functions close over an index vector. This
 // vector is incremented by the HDF5 Writer to read out successive
@@ -33,13 +38,14 @@
 // If this all seems complicated, it's because it's the deep internals
 // of the code. Try to understand the copy_root_tree function first.
 
+// Base class, just to hold a virtual destructor
 class IBuffer
 {
 public:
   virtual ~IBuffer() {}
 };
 
-// Simple variables types are stored in the Buffer
+// Simple variables types are stored in the `Buffer` class.
 template <typename T>
 class Buffer: public IBuffer
 {
@@ -48,48 +54,21 @@ public:
 private:
   T _buffer;
 };
-template <typename T>
-Buffer<T>::Buffer(VariableFillers& vars, TTree& tt,
-                  const std::string& name)
-{
-  tt.SetBranchAddress(name.c_str(), &_buffer);
-  T& buf = _buffer;
-  vars.add<T>(name, [&buf](){return buf;});
-}
 
-// Vector types
+// Buffer for vector types
 template <typename T>
 class VBuf: public IBuffer
 {
 public:
+  // These require an index for the vector (`idx`)
   VBuf(VariableFillers& vars, std::vector<size_t>& idx, TTree& tt,
        const std::string& name, T default_value = T());
   ~VBuf();
 private:
   std::vector<T>* _buffer;
 };
-template <typename T>
-VBuf<T>::VBuf(VariableFillers& vars, std::vector<size_t>& idx, TTree& tt,
-              const std::string& name, T default_value):
-  _buffer(new std::vector<T>)
-{
-  tt.SetBranchAddress(name.c_str(), &_buffer);
-  std::vector<T>& buf = *_buffer;
-  auto filler = [&buf, &idx, default_value](){
-    if (idx.at(0) < buf.size()) {
-      return buf.at(idx.at(0));
-    } else {
-      return default_value;
-    }
-  };
-  vars.add<T>(name, filler);
-}
-template <typename T>
-VBuf<T>::~VBuf() {
-  delete _buffer;
-}
 
-// Vectors of vectors
+// Buffer for vectors of vectors
 template <typename T>
 class VVBuf: public IBuffer
 {
@@ -100,45 +79,22 @@ public:
 private:
   std::vector<std::vector<T> >* _buffer;
 };
-template <typename T>
-VVBuf<T>::VVBuf(VariableFillers& vars, std::vector<size_t>& idx, TTree& tt,
-                const std::string& name, T default_value):
-  _buffer(new std::vector<std::vector<T> >)
-{
-  tt.SetBranchAddress(name.c_str(), &_buffer);
-  std::vector<std::vector<T> >& buf = *_buffer;
-  auto filler = [&buf, &idx, default_value](){
-    size_t idx1 = idx.at(0);
-    size_t idx2 = idx.at(1);
-    if (idx1 < buf.size()) {
-      if (idx2 < buf.at(idx1).size()) {
-        return buf.at(idx1).at(idx2);
-      }
-    }
-    return default_value;
-  };
-  vars.add<T>(name, filler);
-}
-template <typename T>
-VVBuf<T>::~VVBuf() {
-  delete _buffer;
-}
-
 
 // _____________________________________________________________________
 // main copy root tree function
 //
 // The basic workflow is as follows:
 //
-//  - Define the ROOT buffers that we'll read the information into
-//
-//  - At the same time, define functions that read out of these
-//    buffers and copy the information into the HDF5 buffer.
+//  - Define the ROOT-side buffers that we'll read the information
+//    into. At the same time, define HDF-side objects that read out of
+//    these buffers and copy the information into the HDF5 buffer.
 //
 //  - Build the output HDF5 files
 //
 //  - Loop over the input tree and fill the output files
 //
+// Note that this means the event loop happens last: most of the work
+// is just setting up the read and write buffers.
 
 void copy_root_tree(TTree& tt, H5::CommonFG& fg,
                     size_t length, size_t length2,
@@ -263,3 +219,66 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
     std::cerr << "skipped " << name << std::endl;
   }
 }
+
+
+// ______________________________________________________________________
+// Buffer implementation
+
+// 1d buffer
+template <typename T>
+Buffer<T>::Buffer(VariableFillers& vars, TTree& tt,
+                  const std::string& name)
+{
+  tt.SetBranchAddress(name.c_str(), &_buffer);
+  T& buf = _buffer;
+  vars.add<T>(name, [&buf](){return buf;});
+}
+
+// 2d buffer
+template <typename T>
+VBuf<T>::VBuf(VariableFillers& vars, std::vector<size_t>& idx, TTree& tt,
+              const std::string& name, T default_value):
+  _buffer(new std::vector<T>)
+{
+  tt.SetBranchAddress(name.c_str(), &_buffer);
+  std::vector<T>& buf = *_buffer;
+  auto filler = [&buf, &idx, default_value](){
+    if (idx.at(0) < buf.size()) {
+      return buf.at(idx.at(0));
+    } else {
+      return default_value;
+    }
+  };
+  vars.add<T>(name, filler);
+}
+template <typename T>
+VBuf<T>::~VBuf() {
+  delete _buffer;
+}
+
+
+// 3d buffers
+template <typename T>
+VVBuf<T>::VVBuf(VariableFillers& vars, std::vector<size_t>& idx, TTree& tt,
+                const std::string& name, T default_value):
+  _buffer(new std::vector<std::vector<T> >)
+{
+  tt.SetBranchAddress(name.c_str(), &_buffer);
+  std::vector<std::vector<T> >& buf = *_buffer;
+  auto filler = [&buf, &idx, default_value](){
+    size_t idx1 = idx.at(0);
+    size_t idx2 = idx.at(1);
+    if (idx1 < buf.size()) {
+      if (idx2 < buf.at(idx1).size()) {
+        return buf.at(idx1).at(idx2);
+      }
+    }
+    return default_value;
+  };
+  vars.add<T>(name, filler);
+}
+template <typename T>
+VVBuf<T>::~VVBuf() {
+  delete _buffer;
+}
+
