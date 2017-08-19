@@ -3,6 +3,7 @@
 #include "H5Cpp.h"
 
 #include <cassert>
+#include <iostream>             // for printing errors in the destructor
 
 template<>
 H5::DataType get_type<float>() {
@@ -60,6 +61,12 @@ namespace {
     }
     return type;
   }
+
+  void print_destructor_error(const std::string& msg) {
+    std::cerr << "ERROR: an exception was thrown in the destructor of an "
+      "HDF5 file, the output buffer may be corrupted";
+    std::cerr << " (error message: " << msg << ")" << std::endl;
+  }
 }
 
 // _______________________________________________________________________
@@ -103,7 +110,20 @@ WriterXd::WriterXd(H5::CommonFG& group, const std::string& name,
   }
 
   // create ds
+  if (H5Lexists(group.getLocId(), name.c_str(), H5P_DEFAULT)) {
+    throw std::logic_error("tried to overwrite '" + name + "'");
+  }
   _ds = group.createDataSet(name, packed(_type), space, params);
+}
+
+WriterXd::~WriterXd() {
+  try {
+    flush();
+  } catch (H5::Exception& err) {
+    print_destructor_error(err.getDetailMsg());
+  } catch (std::exception& err) {
+    print_destructor_error(err.what());
+  }
 }
 
 void WriterXd::fill_while_incrementing(std::vector<size_t>& indices) {
@@ -111,8 +131,11 @@ void WriterXd::fill_while_incrementing(std::vector<size_t>& indices) {
     flush();
   }
   indices.resize(_max_length.size());
-  // todo: build buffer and _then_ insert it so that exceptions
-  // don't leave the buffer in a weird state
+
+  // build buffer and _then_ insert it so that exceptions don't leave
+  // the buffer in a weird state
+  std::vector<data_buffer_t> temp;
+
   std::fill(indices.begin(), indices.end(), 0);
   for (size_t gidx = 0; gidx < _dim_stride.front(); gidx++) {
 
@@ -122,9 +145,10 @@ void WriterXd::fill_while_incrementing(std::vector<size_t>& indices) {
     }
 
     for (const auto& filler: _fillers) {
-      _buffer.push_back(filler->get_buffer());
+      temp.push_back(filler->get_buffer());
     }
   }
+  _buffer.insert(_buffer.end(), temp.begin(), temp.end());
 }
 void WriterXd::flush() {
   if (buffer_size() == 0) return;
@@ -144,13 +168,10 @@ void WriterXd::flush() {
                              slab_dims.data(), offset_dims.data());
 
   // write out
+  assert(file_space.getSelectNpoints() == _buffer.size() / _fillers.size());
   _ds.write(_buffer.data(), _type, mem_space, file_space);
   _offset += buffer_size();
   _buffer.clear();
-}
-void WriterXd::close() {
-  flush();
-  _ds.close();
 }
 
 hsize_t WriterXd::buffer_size() const {

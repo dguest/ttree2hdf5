@@ -207,11 +207,12 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
     if (writer3d) writer3d->fill_while_incrementing(idx2);
   }
 
-  // Close all the HDF5 files. This also flushes the memory buffers on
-  // the HDF5 side.
-  writer1d->close();
-  if (writer2d) writer2d->close();
-  if (writer3d) writer3d->close();
+  // Flush the memory buffers on the HDF5 side. (This is done by the
+  // destructor automatically, but we do it here to make any errors
+  // more explicit.)
+  writer1d->flush();
+  if (writer2d) writer2d->flush();
+  if (writer3d) writer3d->flush();
 
   // Print the names of any classes that we were't able to read from
   // the root file.

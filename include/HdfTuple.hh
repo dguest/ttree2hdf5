@@ -142,9 +142,9 @@ public:
            hsize_t chunk_size = 2048);
   WriterXd(const WriterXd&) = delete;
   WriterXd& operator=(WriterXd&) = delete;
+  ~WriterXd();
   void fill_while_incrementing(std::vector<size_t>& indices = WriterXd::NONE);
   void flush();
-  void close();
 private:
   static std::vector<size_t> NONE;
   hsize_t buffer_size() const;

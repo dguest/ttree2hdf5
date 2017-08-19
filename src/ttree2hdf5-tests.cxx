@@ -24,8 +24,6 @@ int main(int argc, char* argv[]) {
     writer2.fill_while_incrementing(iii);
   }
   writer.flush();
-  writer.close();
   writer2.flush();
-  writer2.close();
   return 0;
 }
