@@ -15,6 +15,6 @@ void unshittify() {
   // gROOT->ProcessLine("#include <vector>");
 
   // ignore all non-fatal errors
-  gErrorIgnoreLevel = kFatal;
+  // gErrorIgnoreLevel = kFatal;
 }
 

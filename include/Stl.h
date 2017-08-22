@@ -7,6 +7,7 @@
 
 class Dummy {
   vector<vector<int> > vvi;
+  vector<vector<unsigned int> > vvui;
   vector<vector<float> > vvf;
   vector<vector<double> > vvd;
 };

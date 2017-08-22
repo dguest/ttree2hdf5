@@ -113,6 +113,8 @@ $(DICT)/%Dict.cxx: %.h $(LINKDEF)
 	@mkdir -p $(DICT)
 	@rm -f $(DICT)/$*Dict.h $(DICT)/$*Dict.cxx
 	@rootcint -f $@ -c -I$(INC) $(INC)/$*.h $(LINKDEF)
+	@mkdir -p $(OUTPUT)
+	@mv -f $(DICT)/*.pcm $(OUTPUT)
 
 $(BUILD)/%Dict.o: $(DICT)/%Dict.cxx
 	@mkdir -p $(BUILD)
