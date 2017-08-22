@@ -159,6 +159,8 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
       buffers.emplace_back(new VBuf<int>(vars2d, idx, tt, lname, 0));
     } else if (leaf_type == "vector<vector<int> >") {
       buffers.emplace_back(new VVBuf<int>(vars3d, idx2, tt, lname, 0));
+    } else if (leaf_type == "vector<vector<unsigned int> >") {
+      buffers.emplace_back(new VVBuf<unsigned int>(vars3d, idx2, tt, lname, 0));
     } else if (leaf_type == "vector<vector<float> >") {
       buffers.emplace_back(new VVBuf<float>(vars3d, idx2, tt, lname, NAN));
     } else if (leaf_type == "vector<vector<double> >") {

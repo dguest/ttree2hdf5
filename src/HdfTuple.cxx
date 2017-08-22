@@ -14,6 +14,10 @@ H5::DataType get_type<int>() {
   return H5::PredType::NATIVE_INT;
 }
 template<>
+H5::DataType get_type<unsigned int>() {
+  return H5::PredType::NATIVE_UINT;
+}
+template<>
 H5::DataType get_type<double>() {
   return H5::PredType::NATIVE_DOUBLE;
 }
@@ -29,6 +33,9 @@ H5::DataType get_type<bool>() {
 
 template<> int& get_ref<int>(data_buffer_t& buf) {
   return buf._int;
+}
+template<> unsigned int& get_ref<unsigned int>(data_buffer_t& buf) {
+  return buf._uint;
 }
 template<> float& get_ref<float>(data_buffer_t& buf) {
   return buf._float;
