@@ -12,10 +12,12 @@ dimensions feel free to [file an issue][1].
 You can specify the maximum dimensions of the array with
 
 ```
-ttree2hdf5 <root-file> <output-file> [dims..]
+ttree2hdf5 <root-file> -o <output-file> -l [dims..]
 ```
 
 where the `[dims..]` argument can have up to two integers.
+
+For more options check `ttree2hdf5 -h`.
 
 Hacking This Code
 -----------------
@@ -38,7 +40,6 @@ To Do
 
 Other things I might do sometime:
 
- - Add a regex to filter branches
  - Allow grouping of different branches into different output datasets
  - Give the option to supply a TCut string to skim the ntuple
  - Merge with the other [root to hdf5 converter][2] I made for histograms.

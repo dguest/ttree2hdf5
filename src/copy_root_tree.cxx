@@ -16,7 +16,7 @@
 #include "TLeaf.h"
 
 #include <memory>
-
+#include <regex>
 #include <iostream>
 
 // ______________________________________________________________________
@@ -96,9 +96,7 @@ private:
 // Note that this means the event loop happens last: most of the work
 // is just setting up the read and write buffers.
 
-void copy_root_tree(TTree& tt, H5::CommonFG& fg,
-                    size_t length, size_t length2,
-                    size_t chunk_size) {
+void copy_root_tree(TTree& tt, H5::CommonFG& fg, const TreeCopyOpts& opts) {
 
   // define the buffers for root to read into
   std::vector<std::unique_ptr<IBuffer> > buffers;
@@ -130,17 +128,30 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
 
   // Iterate over all the leaf names. There are some duplicates in the
   // list of keys, so we have to build the set ourselves.
+  std::regex branch_filter(opts.branch_regex);
   TIter next(tt.GetListOfLeaves());
   TLeaf* leaf;
   std::set<std::string> leaf_names;
   while ((leaf = dynamic_cast<TLeaf*>(next()))) {
     leaf_names.insert(leaf->GetName());
   }
+  if (leaf_names.size() == 0) throw std::logic_error("no branches found");
 
   // Loop over all the leafs, assign buffers to each
   //
-  // These `Buffer` classes are defined above
+  // These `Buffer` classes are defined above. The buffers turn the
+  // branchs on, so we can set them all off to start.
+  tt.SetBranchStatus("*", false);
   for (const auto& lname: leaf_names) {
+    bool keep = true;
+    if (opts.branch_regex.size() > 0) {
+      keep = std::regex_search(lname, branch_filter);
+    }
+    if (opts.verbose) {
+      std::cout << (keep ? "found " : "rejecting ") << lname << std::endl;
+    }
+    if (!keep) continue;
+
     leaf = tt.GetLeaf(lname.c_str());
     std::string leaf_type = leaf->GetTypeName();
     if (leaf_type == "Int_t") {
@@ -183,17 +194,30 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
   std::unique_ptr<WriterXd> writer2d;
   std::unique_ptr<WriterXd> writer3d;
   std::unique_ptr<H5::Group> top_group;
-  if (length > 0) {
+  if (opts.vector_lengths.size() > 0) {
+    if (opts.vector_lengths.size() > 2) throw std::logic_error(
+      "we don't support outputs with rank > 3");
+    size_t length = opts.vector_lengths.at(0);
     top_group.reset(new H5::Group(fg.createGroup(tree_name)));
-    if (length2 > 0) {
-      writer3d.reset(new WriterXd(*top_group, "3d", vars3d,
-                                  {length, length2}, chunk_size));
+    if (opts.vector_lengths.size() > 1) {
+      size_t length2 = opts.vector_lengths.at(1);
+      if (vars3d.size() > 0) {
+        writer3d.reset(new WriterXd(*top_group, "3d", vars3d,
+                                    {length, length2}, opts.chunk_size));
+      }
     }
-    writer2d.reset(new WriterXd(*top_group, "2d", vars2d,
-                                {length}, chunk_size));
-    writer1d.reset(new WriterXd(*top_group, "1d", vars, {}, chunk_size));
+    if (vars2d.size() > 0) {
+      writer2d.reset(new WriterXd(*top_group, "2d", vars2d,
+                                  {length}, opts.chunk_size));
+    }
+    if (vars.size() > 0) {
+      writer1d.reset(new WriterXd(*top_group, "1d",
+                                  vars, {}, opts.chunk_size));
+    }
   } else {
-    writer1d.reset(new WriterXd(fg, tree_name, vars, {}, chunk_size));
+    if (vars.size() > 0) {
+      writer1d.reset(new WriterXd(fg, tree_name, vars, {}, opts.chunk_size));
+    }
   }
 
   // Main event loop
@@ -203,8 +227,9 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
   //
   size_t n_entries = tt.GetEntries();
   for (size_t iii = 0; iii < n_entries; iii++) {
+    if (opts.n_entries && iii >= opts.n_entries) break;
     tt.GetEntry(iii);
-    writer1d->fill_while_incrementing();
+    if (writer1d) writer1d->fill_while_incrementing();
     if (writer2d) writer2d->fill_while_incrementing(idx);
     if (writer3d) writer3d->fill_while_incrementing(idx2);
   }
@@ -212,14 +237,16 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg,
   // Flush the memory buffers on the HDF5 side. (This is done by the
   // destructor automatically, but we do it here to make any errors
   // more explicit.)
-  writer1d->flush();
+  if (writer1d) writer1d->flush();
   if (writer2d) writer2d->flush();
   if (writer3d) writer3d->flush();
 
   // Print the names of any classes that we were't able to read from
   // the root file.
-  for (const auto& name: skipped) {
-    std::cerr << "skipped " << name << std::endl;
+  if (opts.verbose) {
+    for (const auto& name: skipped) {
+      std::cerr << "could not read branch of type " << name << std::endl;
+    }
   }
 }
 
@@ -232,6 +259,7 @@ template <typename T>
 Buffer<T>::Buffer(VariableFillers& vars, TTree& tt,
                   const std::string& name)
 {
+  tt.SetBranchStatus(name.c_str(), true);
   tt.SetBranchAddress(name.c_str(), &_buffer);
   T& buf = _buffer;
   vars.add<T>(name, [&buf](){return buf;});
@@ -243,6 +271,7 @@ VBuf<T>::VBuf(VariableFillers& vars, std::vector<size_t>& idx, TTree& tt,
               const std::string& name, T default_value):
   _buffer(new std::vector<T>)
 {
+  tt.SetBranchStatus(name.c_str(), true);
   tt.SetBranchAddress(name.c_str(), &_buffer);
   std::vector<T>& buf = *_buffer;
   auto filler = [&buf, &idx, default_value](){
@@ -266,6 +295,7 @@ VVBuf<T>::VVBuf(VariableFillers& vars, std::vector<size_t>& idx, TTree& tt,
                 const std::string& name, T default_value):
   _buffer(new std::vector<std::vector<T> >)
 {
+  tt.SetBranchStatus(name.c_str(), true);
   tt.SetBranchAddress(name.c_str(), &_buffer);
   std::vector<std::vector<T> >& buf = *_buffer;
   auto filler = [&buf, &idx, default_value](){
