@@ -12,19 +12,30 @@ std::tuple<TreeCopyOpts, IOOpts> get_tree_copy_opts(
     + " -o <output> [-h] [opts...]\n";
   po::options_description opt(usage + "\nConvert a root tree to HDF5");
   opt.add_options()
-    ("in-file", po::value(&files.in)->required(), "input file name")
-    ("out-file,o", po::value(&files.out)->required(), "output file name")
+    ("in-file",
+     po::value(&files.in)->required(),
+     "input file name")
+    ("out-file,o",
+     po::value(&files.out)->required(),
+     "output file name")
+    ("tree-name,t",
+     po::value(&files.tree)->default_value("", "found"),
+     "tree to use, use whatever is there by default (or crash if multiple)")
     ("help,h", "Print help messages")
-    ("branch-regex,r", po::value(&opts.branch_regex)->default_value(""),
+    ("branch-regex,r",
+     po::value(&opts.branch_regex)->default_value(""),
      "regex to filter branches")
     ("vector-lengths,l",
      po::value(&opts.vector_lengths)->multitoken()->value_name("args..."),
      "max size of vectors to write")
-    ("verbose,v", po::bool_switch(&opts.verbose), "print branches copied")
+    ("verbose,v",
+     po::bool_switch(&opts.verbose),
+     "print branches copied")
     ("n-entries,n",
      po::value(&opts.n_entries)->default_value(0, "all")->implicit_value(1),
      "number of entries to copy")
-    ("chunk-size,c", po::value(&opts.chunk_size)->default_value(CHUNK_SIZE),
+    ("chunk-size,c",
+     po::value(&opts.chunk_size)->default_value(CHUNK_SIZE),
      "chunk size in HDF5 file")
     ;
   po::positional_options_description pos_opts;

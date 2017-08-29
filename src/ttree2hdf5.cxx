@@ -9,6 +9,8 @@
 #include "TFile.h"
 #include "TTree.h"
 
+#include <iostream>
+
 // todo, use boost program options or something else that doesn't suck
 // for option parsing.
 void usage(const char* prog) {
@@ -23,11 +25,13 @@ int main(int argc, char* argv[]) {
 
   // Read in the root tree. We pick whatever tree is on the top level
   // of the file. If there are two we throw an error.
-  std::string tree_name = get_tree(fnames.in);
+  std::string tree_name = fnames.tree;
+  if (tree_name.size() == 0) tree_name = get_tree(fnames.in);
+  if (opts.verbose) std::cout << "tree: " << tree_name << std::endl;
   std::unique_ptr<TFile> file(TFile::Open(fnames.in.c_str()));
   TTree* tree = dynamic_cast<TTree*>(file->Get(tree_name.c_str()));
   if (!tree) {
-    throw std::logic_error("no tree found");
+    throw std::logic_error("no tree '" + tree_name + "' found");
   }
 
   // make the output file

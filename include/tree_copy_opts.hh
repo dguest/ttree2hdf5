@@ -19,6 +19,7 @@ struct IOOpts
 {
   std::string in;
   std::string out;
+  std::string tree;
 };
 
 std::tuple<TreeCopyOpts, IOOpts> get_tree_copy_opts(
