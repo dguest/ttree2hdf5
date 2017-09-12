@@ -10,6 +10,7 @@
 #include "TTree.h"
 
 #include <iostream>
+#include <memory>
 
 // todo, use boost program options or something else that doesn't suck
 // for option parsing.
