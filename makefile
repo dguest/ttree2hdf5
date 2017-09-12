@@ -78,10 +78,12 @@ LDFLAGS      += $(ROOTLDFLAGS)
 LIBS         += $(ROOTLIBS)
 
 # --- add HDF5
+ifndef HDF_PATH
 HDF_INFO := $(shell h5c++ -showconfig | grep 'Installation point:')
 HDF_PATH := $(strip $(shell echo $(HDF_INFO) | cut -d ':' -f 2 ))
 ifndef HDF_PATH
 $(error "couldn't find HDF, quitting")
+endif
 endif
 
 # --- add boost
