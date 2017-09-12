@@ -168,6 +168,8 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg, const TreeCopyOpts& opts) {
       buffers.emplace_back(new VBuf<double>(vars2d, idx, tt, lname, NAN));
     } else if (leaf_type == "vector<int>") {
       buffers.emplace_back(new VBuf<int>(vars2d, idx, tt, lname, 0));
+    } else if (leaf_type == "vector<bool>") {
+      buffers.emplace_back(new VBuf<bool>(vars2d, idx, tt, lname, 0));
     } else if (leaf_type == "vector<vector<int> >") {
       buffers.emplace_back(new VVBuf<int>(vars3d, idx2, tt, lname, 0));
     } else if (leaf_type == "vector<vector<unsigned int> >") {
@@ -176,6 +178,8 @@ void copy_root_tree(TTree& tt, H5::CommonFG& fg, const TreeCopyOpts& opts) {
       buffers.emplace_back(new VVBuf<float>(vars3d, idx2, tt, lname, NAN));
     } else if (leaf_type == "vector<vector<double> >") {
       buffers.emplace_back(new VVBuf<double>(vars3d, idx2, tt, lname, NAN));
+    } else if (leaf_type == "vector<vector<bool> >") {
+      buffers.emplace_back(new VVBuf<bool>(vars3d, idx2, tt, lname, 0));
     } else {
       skipped.insert(leaf_type);
     }
@@ -274,7 +278,7 @@ VBuf<T>::VBuf(VariableFillers& vars, std::vector<size_t>& idx, TTree& tt,
   tt.SetBranchStatus(name.c_str(), true);
   tt.SetBranchAddress(name.c_str(), &_buffer);
   std::vector<T>& buf = *_buffer;
-  auto filler = [&buf, &idx, default_value](){
+  auto filler = [&buf, &idx, default_value]() -> T {
     if (idx.at(0) < buf.size()) {
       return buf.at(idx.at(0));
     } else {
@@ -298,7 +302,7 @@ VVBuf<T>::VVBuf(VariableFillers& vars, std::vector<size_t>& idx, TTree& tt,
   tt.SetBranchStatus(name.c_str(), true);
   tt.SetBranchAddress(name.c_str(), &_buffer);
   std::vector<std::vector<T> >& buf = *_buffer;
-  auto filler = [&buf, &idx, default_value](){
+  auto filler = [&buf, &idx, default_value]() -> T {
     size_t idx1 = idx.at(0);
     size_t idx2 = idx.at(1);
     if (idx1 < buf.size()) {

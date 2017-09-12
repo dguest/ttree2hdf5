@@ -10,4 +10,5 @@ class Dummy {
   vector<vector<unsigned int> > vvui;
   vector<vector<float> > vvf;
   vector<vector<double> > vvd;
+  vector<vector<bool> > vvb;
 };
