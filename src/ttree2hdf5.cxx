@@ -18,7 +18,7 @@ void usage(const char* prog) {
   printf("usage: %s <root-file> <output-file-name> [length..]\n", prog);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
   unshittify();
   TreeCopyOpts opts;
   IOOpts fnames;

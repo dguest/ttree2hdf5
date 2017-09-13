@@ -23,6 +23,6 @@ struct IOOpts
 };
 
 std::tuple<TreeCopyOpts, IOOpts> get_tree_copy_opts(
-  int argc, char* argv[]);
+  int argc, const char* argv[]);
 
 #endif

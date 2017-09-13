@@ -1,59 +1,59 @@
 #include "tree_copy_opts.hh"
-#include <boost/program_options.hpp>
+#include "parser.hh"
 #include <iostream>
 
-std::tuple<TreeCopyOpts, IOOpts> get_tree_copy_opts(
-  int argc, char* argv[])
-{
-  namespace po = boost::program_options;
-  TreeCopyOpts opts;
-  IOOpts files;
-  std::string usage = "usage: " + std::string(argv[0]) + " <file>"
-    + " -o <output> [-h] [opts...]\n";
-  po::options_description opt(usage + "\nConvert a root tree to HDF5");
-  opt.add_options()
-    ("in-file",
-     po::value(&files.in)->required(),
-     "input file name")
-    ("out-file,o",
-     po::value(&files.out)->required(),
-     "output file name")
-    ("tree-name,t",
-     po::value(&files.tree)->default_value("", "found"),
-     "tree to use, use whatever is there by default (or crash if multiple)")
-    ("help,h", "Print help messages")
-    ("branch-regex,r",
-     po::value(&opts.branch_regex)->default_value(""),
-     "regex to filter branches")
-    ("vector-lengths,l",
-     po::value(&opts.vector_lengths)->multitoken()->value_name("args..."),
-     "max size of vectors to write")
-    ("verbose,v",
-     po::bool_switch(&opts.verbose),
-     "print branches copied")
-    ("n-entries,n",
-     po::value(&opts.n_entries)->default_value(0, "all")->implicit_value(1),
-     "number of entries to copy")
-    ("chunk-size,c",
-     po::value(&opts.chunk_size)->default_value(CHUNK_SIZE),
-     "chunk size in HDF5 file")
-    ;
-  po::positional_options_description pos_opts;
-  pos_opts.add("in-file", -1);
-
-  po::variables_map vm;
-  try {
-    po::store(po::command_line_parser(argc, argv).options(opt)
-            .positional(pos_opts).run(), vm);
-    if ( vm.count("help") ) {
-      std::cout << opt << std::endl;
+namespace {
+  size_t safe_get_size(int in) {
+    if (in < 0) {
+      std::cerr << "ERROR: got negative value for a size" << std::endl;
       exit(1);
     }
-    po::notify(vm);
-  } catch (po::error& err) {
-    std::cerr << usage << "ERROR: " << err.what() << std::endl;
-    exit(1);
+    return in;
   }
+}
+
+std::tuple<TreeCopyOpts, IOOpts> get_tree_copy_opts(
+int argc, const char* argv[])
+{
+optionparser::parser opt;
+  TreeCopyOpts opts;
+  IOOpts files;
+  opt.add_option("--in-file", "-i")
+    .help("input file name").required(true)
+    .mode(optionparser::store_value);
+  opt.add_option("--out-file", "-o")
+    .help("output file name").required(true)
+    .mode(optionparser::store_value);
+  opt.add_option("--tree-name", "-t").help(
+    "tree to use, use whatever is there by default (or crash if multiple)")
+    .default_value("")
+    .mode(optionparser::store_value);
+  opt.add_option("--branch-regex", "-r").help("regex to filter branches")
+    .default_value("")
+    .mode(optionparser::store_value);
+  opt.add_option("--vector-lengths", "-l")
+    .help("max size of vectors to write")
+    .mode(optionparser::store_mult_values);
+  opt.add_option("--verbose", "-v").help("print branches copied")
+    .mode(optionparser::store_true);
+  opt.add_option("--n-entries", "-n").help("number of entries to copy")
+    .default_value(0)
+    .mode(optionparser::store_value);
+  opt.add_option("--chunk-size", "-c").help("chunk size in HDF5 file")
+    .default_value(CHUNK_SIZE)
+    .mode(optionparser::store_value);
+  opt.eat_arguments(argc, argv);
+  files.in = opt.get_value<std::string>("in-file");
+  files.out = opt.get_value<std::string>("out-file");
+  files.tree = opt.get_value<std::string>("tree-name");
+  opts.branch_regex = opt.get_value<std::string>("branch-regex");
+  std::vector<int> vector_lengths;
+  for (int length: opt.get_value<std::vector<int> >("vector-lengths")) {
+    opts.vector_lengths.push_back(safe_get_size(length));
+  }
+  opts.verbose = opt.get_value<bool>("verbose");
+  opts.n_entries = safe_get_size(opt.get_value<int>("n-entries"));
+  opts.chunk_size = safe_get_size(opt.get_value<int>("chunk-size"));
   return std::tie(opts, files);
 }
 
