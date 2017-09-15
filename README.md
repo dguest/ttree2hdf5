@@ -19,6 +19,28 @@ where the `[dims..]` argument can have up to two integers.
 
 For more options check `ttree2hdf5 -h`.
 
+Setup
+-----
+
+The makefile will try to find HDF5 (C++ interfaces required), boost
+(for `program_options`) and ROOT. If these are available on your
+system you can install with make.
+
+### ATLAS + lxplus Only ###
+
+To install on lxplus we also include a CMake file. Run
+
+```
+source setup-atlas-lxplus.sh
+mkdir build
+cd build
+cmake ..
+make -j 4
+```
+
+**WARNING:** we're currently using a custom installation of HDF5, see the issue here: https://sft.its.cern.ch/jira/browse/SPI-984
+
+
 Hacking This Code
 -----------------
 
