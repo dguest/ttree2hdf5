@@ -175,7 +175,8 @@ void WriterXd::flush() {
                              slab_dims.data(), offset_dims.data());
 
   // write out
-  assert(file_space.getSelectNpoints() == _buffer.size() / _fillers.size());
+  assert(static_cast<size_t>(file_space.getSelectNpoints())
+         == _buffer.size() / _fillers.size());
   _ds.write(_buffer.data(), _type, mem_space, file_space);
   _offset += buffer_size();
   _buffer.clear();
