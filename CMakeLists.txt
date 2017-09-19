@@ -60,7 +60,7 @@ target_link_libraries(convert2hdf5
   ${HDF5_LIBRARIES}
 )
 
-include_directories(BEFORE SYSTEM ${HDF5_INCLUDE})
+include_directories(BEFORE SYSTEM ${HDF5_INCLUDE_DIRS})
 target_include_directories( convert2hdf5
   PRIVATE ${HDF5_INCLUDE_DIRS}
   PUBLIC ${Boost_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS}
