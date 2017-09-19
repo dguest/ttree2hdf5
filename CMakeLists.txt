@@ -27,12 +27,12 @@ find_package( Boost 1.54.0 REQUIRED COMPONENTS program_options)
 find_package( HDF5 1.8.12 COMPONENTS CXX HL)
 # We're waiting on a fix for this here:
 # https://sft.its.cern.ch/jira/browse/SPI-984
-if (HDF5_FOUND)
+if (NOT HDF5_FOUND)
   # So instead we hack it
   set( HDF5_DIR "/afs/cern.ch/user/d/dguest/afswork/public/hdf5/hdf5-1.8.19/install/")
   set( HDF5_INCLUDE_DIRS "${HDF5_DIR}/include/")
   set( HDF5_LIBRARIES "${HDF5_DIR}/lib/")
-endif (HDF5_FOUND)
+endif (NOT HDF5_FOUND)
 
 set( lib_headers
   include/HdfTuple.hh
@@ -53,17 +53,19 @@ set( lib_sources
   src/unshittify.cxx
 )
 
-add_library( Ttree2hdf5 SHARED ${lib_headers} ${lib_sources} G__Stl)
-include_directories(BEFORE SYSTEM ${HDF5_INCLUDE})
-target_include_directories( Ttree2hdf5
-  PRIVATE ${HDF5_INCLUDE_DIRS}
-  PUBLIC ${Boost_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS}
-)
-add_executable(ttree2hdf5 src/ttree2hdf5.cxx)
-target_link_libraries(ttree2hdf5 Ttree2hdf5
+add_library( convert2hdf5 SHARED ${lib_headers} ${lib_sources} G__Stl)
+target_link_libraries(convert2hdf5
   ${Boost_LIBRARIES}
   ${ROOT_LIBRARIES}
   ${HDF5_LIBRARIES}
 )
+
+include_directories(BEFORE SYSTEM ${HDF5_INCLUDE})
+target_include_directories( convert2hdf5
+  PRIVATE ${HDF5_INCLUDE_DIRS}
+  PUBLIC ${Boost_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS}
+)
+add_executable(ttree2hdf5 src/ttree2hdf5.cxx)
+target_link_libraries(ttree2hdf5 convert2hdf5)
 
 
