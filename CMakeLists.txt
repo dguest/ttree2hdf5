@@ -53,7 +53,7 @@ set( lib_sources
   src/unshittify.cxx
 )
 
-add_library( convert2hdf5 SHARED ${lib_headers} ${lib_sources} G__Stl)
+add_library( convert2hdf5 STATIC ${lib_headers} ${lib_sources} G__Stl)
 target_link_libraries(convert2hdf5
   ${Boost_LIBRARIES}
   ${ROOT_LIBRARIES}
