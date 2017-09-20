@@ -66,7 +66,7 @@ target_include_directories( convert2hdf5
   PRIVATE ${HDF5_INCLUDE_DIRS}
   PUBLIC ${Boost_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS}
 )
-add_executable(ttree2hdf5 src/ttree2hdf5.cxx)
+add_executable(ttree2hdf5 src/ttree2hdf5.cxx G__Stl.cxx)
 target_link_libraries(ttree2hdf5 convert2hdf5)
 
 
