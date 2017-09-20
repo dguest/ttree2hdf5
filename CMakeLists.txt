@@ -31,7 +31,8 @@ if (NOT HDF5_FOUND)
   # So instead we hack it
   set( HDF5_DIR "/afs/cern.ch/user/d/dguest/afswork/public/hdf5/hdf5-1.8.19/install/")
   set( HDF5_INCLUDE_DIRS "${HDF5_DIR}/include/")
-  set( HDF5_LIBRARIES "${HDF5_DIR}/lib/")
+  set( HDF5_LIB "${HDF5_DIR}/lib/")
+  set( HDF5_LIBRARIES ${HDF5_LIB}/libhdf5_cpp.so ${HDF5_LIB}/libhdf5.so )
 endif (NOT HDF5_FOUND)
 
 set( lib_headers
