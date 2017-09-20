@@ -14,13 +14,14 @@ set( CMAKE_CXX_FLAGS "-Wall -pedantic" )
 
 include_directories(include)
 
+# find root
 list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
-#---Locate the ROOT package and defines a number of variables (e.g. ROOT_INCLUDE_DIRS)
-find_package(ROOT REQUIRED COMPONENTS MathCore RIO Hist Tree Net Core Matrix Physics)
-
+find_package(ROOT REQUIRED COMPONENTS RIO Hist Tree Net Core)
+# make root dicts
 include(${ROOT_USE_FILE})
 ROOT_GENERATE_DICTIONARY(G__Stl include/Stl.h LINKDEF include/LinkDef.h)
 
+# find boost
 find_package( Boost 1.54.0 REQUIRED COMPONENTS program_options)
 
 #Ideally we would like to use this, but can't
@@ -54,18 +55,22 @@ set( lib_sources
   src/unshittify.cxx
 )
 
-add_library( convert2hdf5 STATIC ${lib_headers} ${lib_sources} G__Stl)
+# this seems to be required on lxplus... not sure why...
+include_directories(BEFORE SYSTEM ${HDF5_INCLUDE_DIRS})
+
+# build main library
+add_library( convert2hdf5 STATIC ${lib_headers} ${lib_sources})
 target_link_libraries(convert2hdf5
   ${Boost_LIBRARIES}
   ${ROOT_LIBRARIES}
   ${HDF5_LIBRARIES}
 )
-
-include_directories(BEFORE SYSTEM ${HDF5_INCLUDE_DIRS})
 target_include_directories( convert2hdf5
   PRIVATE ${HDF5_INCLUDE_DIRS}
   PUBLIC ${Boost_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS}
 )
+
+# build top level executable
 add_executable(ttree2hdf5 src/ttree2hdf5.cxx G__Stl.cxx)
 target_link_libraries(ttree2hdf5 convert2hdf5)
 
