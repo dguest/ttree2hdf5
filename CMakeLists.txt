@@ -32,7 +32,7 @@ find_package( Boost 1.54.0 REQUIRED COMPONENTS program_options)
 # https://sft.its.cern.ch/jira/browse/SPI-984
 #
 set(HDF5_DIR "FIND" CACHE STRING "Directory where HDF5 lives (or BUILTIN)")
-if (HDF5_DIR STREQUAL "FIND")
+if(HDF5_DIR STREQUAL "FIND")
   find_package( HDF5 1.8.12 REQUIRED COMPONENTS CXX HL)
 else()
   if(HDF5_DIR STREQUAL "BUILTIN")
@@ -51,6 +51,7 @@ else()
       BUILD_COMMAND make -j4
       INSTALL_COMMAND make install)
     set(HDF5_DIR ${CMAKE_BINARY_DIR}/externals/hdf5)
+    set(BUILTIN_HDF5 TRUE)
   elseif(NOT IS_DIRECTORY HDF5_DIR)
     message(FATAL_ERROR "HDF5 path ${HDF5_DIR} does not point to a directory")
   endif()
@@ -94,7 +95,10 @@ target_link_libraries(convert2hdf5
 target_include_directories( convert2hdf5
   PRIVATE ${HDF5_INCLUDE_DIRS}
   PUBLIC ${Boost_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS}
-)
+  )
+if(BUILTIN_HDF5)
+  add_dependencies( convert2hdf5 HDF5 )
+endif()
 
 # build top level executable
 add_executable(ttree2hdf5 src/ttree2hdf5.cxx G__Stl.cxx)
