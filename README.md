@@ -20,36 +20,68 @@ where the `[dims..]` argument can have up to two integers.
 For more options check `ttree2hdf5 -h`.
 
 Setup
------
+=====
 
-The makefile will try to find HDF5 (C++ interfaces required), boost
-(for `program_options`) and ROOT. If these are available on your
-system you can install with make.
+The dependencies are HDF5 (C++ interfaces required), boost (for
+`program_options`) and ROOT. If these are available on your system you
+can build with `make`.
 
-### ATLAS + lxplus Only ###
+Building with CMake
+-------------------
 
-To install on lxplus we also include a CMake file. Run
+We also include a CMake file. Run
 
 ```
-source setup-atlas-lxplus.sh
 mkdir build
 cd build
 cmake ..
 make -j 4
 ```
 
-**WARNING:** we're currently using a custom installation of HDF5, see the issue here: https://sft.its.cern.ch/jira/browse/SPI-984
-
-As a work around on lxplus, you can use
+If you don't have access to HDF5, you can tell CMake to build it by
+replacing the `cmake ..` line with
 
 ```
-cmake -DHDF_DIR=/afs/cern.ch/user/d/dguest/afswork/public/hdf5/hdf5-1.8.19/install/
-..
+cmake -DHDF5_DIR=BUILTIN ..
 ```
+
+Note that this takes about 10 minutes. If you already have HDF5 built
+somewhere, you can also use
+
+```
+cmake -DHDF5_DIR=${HDF_ROOT} ..
+```
+
+where `HDF_ROOT` must point to the HDF5 directory.
+
+Building in Special Environments
+--------------------------------
+
+Here **we count LHC experiments like ATLAS as "special"**: you
+typically need to figure out how to find everything on
+`/cvmfs/`. There are scripts to setup these environments in `setup/`,
+e.g.:
+
+```
+source setup/atlas-cvmfs.sh
+```
+
+Since we don't currently have HDF5 working in LCG (see this
+[JIRA issue][1]) I've built a version on AFS which should be
+compatible with the above setup script. Run
+
+```
+HDF_ROOT=/afs/cern.ch/user/d/dguest/afswork/public/hdf5/hdf5-1.8.19/install/
+cmake -DHDF5_DIR=${HDF_ROOT} ..
+```
+
+And be sure to complain to LCG so they fix their HDF5 installation.
+
+[1]: https://sft.its.cern.ch/jira/browse/SPI-984
 
 
 Hacking This Code
------------------
+=================
 
 I've _tried_ to make this code as modular and straightforward as
 possible. Of course if anything is unclear you should
