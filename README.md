@@ -40,6 +40,13 @@ make -j 4
 
 **WARNING:** we're currently using a custom installation of HDF5, see the issue here: https://sft.its.cern.ch/jira/browse/SPI-984
 
+As a work around on lxplus, you can use
+
+```
+cmake -DHDF_DIR=/afs/cern.ch/user/d/dguest/afswork/public/hdf5/hdf5-1.8.19/install/
+..
+```
+
 
 Hacking This Code
 -----------------

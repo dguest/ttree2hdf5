@@ -24,17 +24,22 @@ ROOT_GENERATE_DICTIONARY(G__Stl include/Stl.h LINKDEF include/LinkDef.h)
 # find boost
 find_package( Boost 1.54.0 REQUIRED COMPONENTS program_options)
 
-#Ideally we would like to use this, but can't
-find_package( HDF5 1.8.12 COMPONENTS CXX HL)
-# We're waiting on a fix for this here:
-# https://sft.its.cern.ch/jira/browse/SPI-984
-if (NOT HDF5_FOUND)
-  # So instead we hack it
-  set( HDF5_DIR "/afs/cern.ch/user/d/dguest/afswork/public/hdf5/hdf5-1.8.19/install/")
+set(HDF5_DIR "FIND" CACHE STRING "Directory where HDF5 lives (or BUILTIN)")
+if (HDF5_DIR STREQUAL "FIND")
+  # Ideally we would like to use find_package, but in ATLAS code we're
+  # waiting on a fix for this here:
+  #
+  # https://sft.its.cern.ch/jira/browse/SPI-984
+  #
+  find_package( HDF5 1.8.12 REQUIRED COMPONENTS CXX HL)
+elseif(HDF5_DIR STREQUAL "BUILTIN")
+  message(ERROR "not implemented")
+else()
+  # Take use the user defined path
   set( HDF5_INCLUDE_DIRS "${HDF5_DIR}/include/")
   set( HDF5_LIB "${HDF5_DIR}/lib/")
   set( HDF5_LIBRARIES ${HDF5_LIB}/libhdf5_cpp.so ${HDF5_LIB}/libhdf5.so )
-endif (NOT HDF5_FOUND)
+endif()
 
 set( lib_headers
   include/HdfTuple.hh
