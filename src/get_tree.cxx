@@ -43,15 +43,14 @@ std::string get_tree(const std::string& file_name) {
   }
   size_t n_unique = keys.size();
   if (n_unique > 1) {
-    std::string prob = "can't make up tree with " +
-      std::to_string(n_unique) + " keys [";
+    std::string prob = "Can't decide which tree to use, choose one of {";
     size_t uniq_n = 0;
     for (const auto& key: keys) {
       prob.append(key);
       uniq_n++;
       if (uniq_n < n_unique) prob.append(", ");
     }
-    prob.append("]");
+    prob.append("} with the --tree-name option");
     throw std::logic_error(prob);
   }
   auto* key = dynamic_cast<TKey*>(file->GetListOfKeys()->At(0));
