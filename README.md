@@ -9,13 +9,23 @@ are stored as a 1D array of compound data type. Branches that store
 `vector<vector<T> >` are stored in a 3D array. If you want more
 dimensions feel free to [file an issue][1].
 
-You can specify the maximum dimensions of the array with
+Note that **we only support the types listed above**. The purpose of
+this package is _not_ to provide a generic converter from ROOT to
+HDF5, but rather to convert simple ROOT files to a more widely
+supported data format.
+
+Output Format
+-------------
+
+You can specify the maximum dimensions of the HDF5 array with
 
 ```
 ttree2hdf5 <root-file> -o <output-file> -l [dims..]
 ```
 
 where the `[dims..]` argument can have up to two integers.
+
+You can also filter branches with the `--branch-regex` option.
 
 For more options check `ttree2hdf5 -h`.
 
