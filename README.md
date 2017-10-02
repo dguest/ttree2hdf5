@@ -52,14 +52,14 @@ If you don't have access to HDF5, you can tell CMake to build it by
 replacing the `cmake ..` line with
 
 ```
-cmake -DHDF5_DIR=BUILTIN ..
+cmake -DH5_LOC=BUILTIN ..
 ```
 
 Note that this takes about 10 minutes. If you already have HDF5 built
 somewhere, you can also use
 
 ```
-cmake -DHDF5_DIR=${HDF_ROOT} ..
+cmake -DH5_LOC=${HDF_ROOT} ..
 ```
 
 where `HDF_ROOT` must point to the HDF5 directory.
@@ -82,7 +82,7 @@ compatible with the above setup script. Run
 
 ```
 HDF_ROOT=/afs/cern.ch/user/d/dguest/afswork/public/hdf5/hdf5-1.8.19/install/
-cmake -DHDF5_DIR=${HDF_ROOT} ..
+cmake -DH5_LOC=${HDF_ROOT} ..
 ```
 
 And be sure to complain to LCG so they fix their HDF5 installation.

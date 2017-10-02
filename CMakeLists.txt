@@ -24,6 +24,9 @@ ROOT_GENERATE_DICTIONARY(G__Stl include/Stl.h LINKDEF include/LinkDef.h)
 # find boost
 find_package( Boost 1.54.0 REQUIRED COMPONENTS program_options)
 
+# find zlib
+find_package( ZLIB REQUIRED )
+
 # find HDF5
 #
 # Ideally we would like to use find_package, but in ATLAS code we're
@@ -31,11 +34,11 @@ find_package( Boost 1.54.0 REQUIRED COMPONENTS program_options)
 #
 # https://sft.its.cern.ch/jira/browse/SPI-984
 #
-set(HDF5_DIR "FIND" CACHE STRING "Directory where HDF5 lives (or BUILTIN)")
-if(HDF5_DIR STREQUAL "FIND")
+set(H5_LOC "FIND" CACHE STRING "Directory where HDF5 lives (or BUILTIN)")
+if(H5_LOC STREQUAL "FIND")
   find_package( HDF5 1.8.12 REQUIRED COMPONENTS CXX HL)
 else()
-  if(HDF5_DIR STREQUAL "BUILTIN")
+  if(H5_LOC STREQUAL "BUILTIN")
     # one option is to build HDF5 here
     # include(ProcessorCount)
     # ProcessorCount(NProcs)
@@ -43,24 +46,27 @@ else()
     ExternalProject_Add( HDF5
       PREFIX ${CMAKE_BINARY_DIR}/externals
       INSTALL_DIR ${CMAKE_BINARY_DIR}/externals/hdf5
-      URL
-      "https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz"
+      URL "https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz"
       URL_MD5 "7f568e2464d4ab0a74d16b23956d900b"
       BUILD_IN_SOURCE 1
-      CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR> --enable-cxx
+      CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR> --enable-cxx --with-zlib=${ZLIB_INCLUDE_DIRS},${ZLIB_LIBRARIES}
       BUILD_COMMAND make -j4
       INSTALL_COMMAND make install)
-    set(HDF5_DIR ${CMAKE_BINARY_DIR}/externals/hdf5)
+    set(H5_LOC ${CMAKE_BINARY_DIR}/externals/hdf5)
     set(BUILTIN_HDF5 TRUE)
-  elseif(NOT IS_DIRECTORY HDF5_DIR)
-    message(FATAL_ERROR "HDF5 path ${HDF5_DIR} does not point to a directory")
+  elseif(NOT IS_DIRECTORY H5_LOC)
+    message(FATAL_ERROR "HDF5 path ${H5_LOC} does not point to a directory")
   endif()
   # if not a custom build, take the path to be user defined
-  set( HDF5_INCLUDE_DIRS "${HDF5_DIR}/include/")
-  set( HDF5_LIB "${HDF5_DIR}/lib/")
-  set( SO_SUFFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
+  set( HDF5_INCLUDE_DIRS "${H5_LOC}/include/")
+  set( HDF5_LIB "${H5_LOC}/lib/")
+  if(BUILTIN_HDF5)
+    set( SUFFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
+  else()
+    set( SUFFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
+  endif()
   set( HDF5_LIBRARIES
-    ${HDF5_LIB}/libhdf5_cpp${SO_SUFFFIX} ${HDF5_LIB}/libhdf5${SO_SUFFFIX} )
+    ${HDF5_LIB}/libhdf5_cpp${SUFFFIX} ${HDF5_LIB}/libhdf5${SUFFFIX} )
 endif()
 
 set( lib_headers
@@ -91,10 +97,11 @@ target_link_libraries(convert2hdf5
   ${Boost_LIBRARIES}
   ${ROOT_LIBRARIES}
   ${HDF5_LIBRARIES}
+  ${ZLIB_LIBRARIES}
 )
 target_include_directories( convert2hdf5
   PRIVATE ${HDF5_INCLUDE_DIRS}
-  PUBLIC ${Boost_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS}
+  PUBLIC ${Boost_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS}
   )
 if(BUILTIN_HDF5)
   add_dependencies( convert2hdf5 HDF5 )
