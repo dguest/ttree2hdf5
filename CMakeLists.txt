@@ -24,21 +24,42 @@ ROOT_GENERATE_DICTIONARY(G__Stl include/Stl.h LINKDEF include/LinkDef.h)
 # find boost
 find_package( Boost 1.54.0 REQUIRED COMPONENTS program_options)
 
+# find HDF5
+#
+# Ideally we would like to use find_package, but in ATLAS code we're
+# waiting on a fix for this here:
+#
+# https://sft.its.cern.ch/jira/browse/SPI-984
+#
 set(HDF5_DIR "FIND" CACHE STRING "Directory where HDF5 lives (or BUILTIN)")
 if (HDF5_DIR STREQUAL "FIND")
-  # Ideally we would like to use find_package, but in ATLAS code we're
-  # waiting on a fix for this here:
-  #
-  # https://sft.its.cern.ch/jira/browse/SPI-984
-  #
   find_package( HDF5 1.8.12 REQUIRED COMPONENTS CXX HL)
-elseif(HDF5_DIR STREQUAL "BUILTIN")
-  message(ERROR "not implemented")
 else()
-  # Take use the user defined path
+  if(HDF5_DIR STREQUAL "BUILTIN")
+    # one option is to build HDF5 here
+    # include(ProcessorCount)
+    # ProcessorCount(NProcs)
+    include( ExternalProject )
+    ExternalProject_Add( HDF5
+      PREFIX ${CMAKE_BINARY_DIR}/externals
+      INSTALL_DIR ${CMAKE_BINARY_DIR}/externals/hdf5
+      URL
+      "https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz"
+      URL_MD5 "7f568e2464d4ab0a74d16b23956d900b"
+      BUILD_IN_SOURCE 1
+      CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR> --enable-cxx
+      BUILD_COMMAND make -j4
+      INSTALL_COMMAND make install)
+    set(HDF5_DIR ${CMAKE_BINARY_DIR}/externals/hdf5)
+  elseif(NOT IS_DIRECTORY HDF5_DIR)
+    message(FATAL_ERROR "HDF5 path ${HDF5_DIR} does not point to a directory")
+  endif()
+  # if not a custom build, take the path to be user defined
   set( HDF5_INCLUDE_DIRS "${HDF5_DIR}/include/")
   set( HDF5_LIB "${HDF5_DIR}/lib/")
-  set( HDF5_LIBRARIES ${HDF5_LIB}/libhdf5_cpp.so ${HDF5_LIB}/libhdf5.so )
+  set( SO_SUFFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
+  set( HDF5_LIBRARIES
+    ${HDF5_LIB}/libhdf5_cpp${SO_SUFFFIX} ${HDF5_LIB}/libhdf5${SO_SUFFFIX} )
 endif()
 
 set( lib_headers
