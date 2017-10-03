@@ -27,6 +27,7 @@ find_package( Boost 1.54.0 REQUIRED COMPONENTS program_options)
 
 # find zlib
 find_package( ZLIB REQUIRED )
+get_filename_component(ZLIB_LIB_DIR ZLIB_LIBRARIES DIRECTORY)
 
 # find HDF5
 #
@@ -41,8 +42,13 @@ if(H5_LOC STREQUAL "FIND")
 else()
   if(H5_LOC STREQUAL "BUILTIN")
     # one option is to build HDF5 here
-    # include(ProcessorCount)
-    # ProcessorCount(NProcs)
+    include(ProcessorCount)
+    ProcessorCount(NProcs)
+    message(STATUS "Building HDF5 with ${NProcs} cores")
+    if(NProcs EQUAL 0)
+      message(" *** Processor count failed, using 1 core *** ")
+      set(NProcs 1)
+    endif()
     include( ExternalProject )
     ExternalProject_Add( HDF5
       PREFIX ${CMAKE_BINARY_DIR}/externals
@@ -50,8 +56,8 @@ else()
       URL "https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz"
       URL_MD5 "7f568e2464d4ab0a74d16b23956d900b"
       BUILD_IN_SOURCE 1
-      CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR> --enable-cxx --with-zlib=${ZLIB_INCLUDE_DIRS},${ZLIB_LIBRARIES}
-      BUILD_COMMAND make -j4
+      CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR> --enable-cxx --with-zlib=${ZLIB_INCLUDE_DIRS},${ZLIB_LIB_DIR}
+      BUILD_COMMAND make -j${NProcs}
       INSTALL_COMMAND make install)
     set(H5_LOC ${CMAKE_BINARY_DIR}/externals/hdf5)
     set(BUILTIN_HDF5 TRUE)
@@ -102,5 +108,6 @@ endif()
 add_executable(ttree2hdf5 src/ttree2hdf5.cxx G__Stl.cxx)
 target_link_libraries(ttree2hdf5 convert2hdf5)
 
+# install binary
 install(TARGETS ttree2hdf5 DESTINATION bin)
-
+install(FILES ${CMAKE_BINARY_DIR}/libStl_rdict.pcm DESTINATION bin)
