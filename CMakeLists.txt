@@ -102,4 +102,5 @@ endif()
 add_executable(ttree2hdf5 src/ttree2hdf5.cxx G__Stl.cxx)
 target_link_libraries(ttree2hdf5 convert2hdf5)
 
+install(TARGETS ttree2hdf5 DESTINATION bin)
 
