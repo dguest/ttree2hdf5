@@ -69,16 +69,6 @@ else()
     ${HDF5_LIB}/libhdf5_cpp${SUFFFIX} ${HDF5_LIB}/libhdf5${SUFFFIX} )
 endif()
 
-set( lib_headers
-  include/HdfTuple.hh
-  include/LinkDef.h
-  include/Stl.h
-  include/copy_root_tree.hh
-  include/get_tree.hh
-  include/tree_copy_opts.hh
-  include/unshittify.hh
-)
-
 set( lib_sources
   src/HdfTuple.cxx
   src/copy_root_tree.cxx
@@ -92,7 +82,7 @@ set( lib_sources
 include_directories(BEFORE SYSTEM ${HDF5_INCLUDE_DIRS})
 
 # build main library
-add_library( convert2hdf5 STATIC ${lib_headers} ${lib_sources})
+add_library( convert2hdf5 STATIC ${lib_sources})
 target_link_libraries(convert2hdf5
   ${Boost_LIBRARIES}
   ${ROOT_LIBRARIES}
