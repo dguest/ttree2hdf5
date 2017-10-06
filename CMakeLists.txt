@@ -51,8 +51,7 @@ else()
     endif()
     include( ExternalProject )
     ExternalProject_Add( HDF5
-      PREFIX ${CMAKE_BINARY_DIR}/externals
-      INSTALL_DIR ${CMAKE_BINARY_DIR}/externals/hdf5
+      PREFIX ${CMAKE_BINARY_DIR}/externals/hdf5
       URL "https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz"
       URL_MD5 "7f568e2464d4ab0a74d16b23956d900b"
       BUILD_IN_SOURCE 1
