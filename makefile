@@ -15,8 +15,8 @@ LIB          := lib
 
 #  set search path
 vpath %.cxx  $(SRC)
-vpath %.hh   $(INC)
-vpath %.h    $(INC)
+vpath %.hh   $(INC) $(SRC)
+vpath %.h    $(INC) $(SRC)
 vpath %Dict.h $(DICT)
 vpath %Dict.cxx $(DICT)
 
@@ -117,12 +117,12 @@ $(BUILD)/%.o: %.cxx
 	@$(CXX) -c $(CXXFLAGS) $< -o $@
 
 # --- ROOT dictionary generation
-LINKDEF := $(INC)/LinkDef.h
+LINKDEF := $(SRC)/LinkDef.h
 $(DICT)/%Dict.cxx: %.h $(LINKDEF)
 	@echo making dict $@
 	@mkdir -p $(DICT)
 	@rm -f $(DICT)/$*Dict.h $(DICT)/$*Dict.cxx
-	@rootcint -f $@ -c -I$(INC) $(INC)/$*.h $(LINKDEF)
+	@rootcint -f $@ -c -I$(SRC) $(SRC)/$*.h $(LINKDEF)
 	@mkdir -p $(OUTPUT)
 	@mv -f $(DICT)/*.pcm $(OUTPUT)
 
