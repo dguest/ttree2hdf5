@@ -7,6 +7,8 @@
 *.png
 *.tgz
 *.pcm
+*.so
+*.dylib
 
 # mac shit
 .DS_Store
@@ -25,3 +27,4 @@ __pycache__
 /plots/
 /run/
 /*-files
+/lib/

@@ -12,14 +12,14 @@ project( ttree2hdf5 VERSION 1.0 )
 # Set the warning flag(s) to use.
 set( CMAKE_CXX_FLAGS "-Wall -pedantic" )
 
-include_directories(include)
+include_directories(include src)
 
 # find root
 list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
 find_package(ROOT REQUIRED COMPONENTS RIO Hist Tree Net Core)
 # make root dicts
 include(${ROOT_USE_FILE})
-ROOT_GENERATE_DICTIONARY(G__Stl include/Stl.h LINKDEF include/LinkDef.h)
+ROOT_GENERATE_DICTIONARY(G__Stl src/Stl.h LINKDEF src/LinkDef.h)
 
 # find boost
 set(Boost_USE_STATIC_LIBS ON)
@@ -109,5 +109,8 @@ add_executable(ttree2hdf5 src/ttree2hdf5.cxx G__Stl.cxx)
 target_link_libraries(ttree2hdf5 convert2hdf5)
 
 # install binary
-install(TARGETS ttree2hdf5 DESTINATION bin)
+install(TARGETS ttree2hdf5 convert2hdf5
+  RUNTIME DESTINATION bin
+  ARCHIVE DESTINATION lib
+  PUBLIC_HEADER DESTINATION include)
 install(FILES ${CMAKE_BINARY_DIR}/libStl_rdict.pcm DESTINATION bin)
