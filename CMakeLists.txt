@@ -61,7 +61,7 @@ else()
       INSTALL_COMMAND make install)
     set(H5_LOC ${CMAKE_BINARY_DIR}/externals/hdf5)
     set(BUILTIN_HDF5 TRUE)
-  elseif(NOT IS_DIRECTORY H5_LOC)
+  elseif(NOT IS_DIRECTORY ${H5_LOC})
     message(FATAL_ERROR "HDF5 path ${H5_LOC} does not point to a directory")
   endif()
   # if not a custom build, take the path to be user defined
