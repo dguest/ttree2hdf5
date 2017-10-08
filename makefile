@@ -22,7 +22,7 @@ vpath %Dict.cxx $(DICT)
 
 # --- set compiler and flags (roll c options and include paths together)
 CXX          ?= g++
-CXXFLAGS     := -O2 -Wall -fPIC -I$(INC) -g -std=c++11
+CXXFLAGS     := -O2 -Wall -fPIC -I$(INC) -g -std=c++14
 LIBS         := # blank, more will be added below
 LDFLAGS      := # blank, more will be added below
 

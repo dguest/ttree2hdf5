@@ -10,7 +10,7 @@ endif()
 project( ttree2hdf5 VERSION 1.0 )
 
 # Set the warning flag(s) to use.
-set( CMAKE_CXX_STANDARD 11)
+set( CMAKE_CXX_STANDARD 14)
 set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic" )
 
 include_directories(include src)
