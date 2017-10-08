@@ -139,5 +139,5 @@ else()
     RUNTIME DESTINATION bin
     ARCHIVE DESTINATION lib
     PUBLIC_HEADER DESTINATION include)
-  install(FILES ${CMAKE_BINARY_DIR}/libStl_rdict.pcm DESTINATION bin)
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libStl_rdict.pcm DESTINATION bin)
 endif()
