@@ -10,20 +10,10 @@ endif()
 project( ttree2hdf5 VERSION 1.0 )
 
 # Set the warning flag(s) to use.
-set( CMAKE_CXX_FLAGS "-Wall -pedantic" )
+set( CMAKE_CXX_STANDARD 11)
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic" )
 
 include_directories(include src)
-
-# find root
-list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
-find_package(ROOT REQUIRED COMPONENTS RIO Hist Tree Net Core)
-# make root dicts
-include(${ROOT_USE_FILE})
-ROOT_GENERATE_DICTIONARY(G__Stl src/Stl.h LINKDEF src/LinkDef.h)
-
-# find boost
-set(Boost_USE_STATIC_LIBS ON)
-find_package( Boost 1.54.0 REQUIRED COMPONENTS program_options)
 
 # find zlib
 find_package( ZLIB REQUIRED )
@@ -75,41 +65,79 @@ else()
     ${HDF5_LIB}/libhdf5_cpp${SUFFFIX} ${HDF5_LIB}/libhdf5${SUFFFIX} )
 endif()
 
-set( lib_sources
-  src/HdfTuple.cxx
-  src/copy_root_tree.cxx
-  src/get_tree.cxx
-  src/tree_copy_opts.cxx
-  src/ttree2hdf5.cxx
-  src/unshittify.cxx
-)
 
-# this seems to be required on lxplus... not sure why...
-include_directories(BEFORE SYSTEM ${HDF5_INCLUDE_DIRS})
+# Add the hdf tuple wrapper
+#
+# We build two, one static and one shared
+#
+add_library(HdfTuple SHARED src/HdfTuple.cxx)
+target_link_libraries(HdfTuple ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
+target_include_directories(HdfTuple
+  PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 
-# build main library
-add_library( convert2hdf5 STATIC ${lib_sources})
-target_link_libraries(convert2hdf5
-  ${Boost_LIBRARIES}
-  ${ROOT_LIBRARIES}
-  ${HDF5_LIBRARIES}
-  ${ZLIB_LIBRARIES}
-)
-target_include_directories( convert2hdf5
-  PRIVATE ${HDF5_INCLUDE_DIRS}
-  PUBLIC ${Boost_INCLUDE_DIRS} ${ROOT_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS}
-  )
+add_library(HdfTuple-static STATIC src/HdfTuple.cxx)
+target_link_libraries(HdfTuple-static ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
+target_include_directories(HdfTuple
+  PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+
 if(BUILTIN_HDF5)
-  add_dependencies( convert2hdf5 HDF5 )
+  add_dependencies( HdfTuple HDF5 )
+  add_dependencies( HdfTuple-static HDF5 )
 endif()
-
-# build top level executable
-add_executable(ttree2hdf5 src/ttree2hdf5.cxx G__Stl.cxx)
-target_link_libraries(ttree2hdf5 convert2hdf5)
-
-# install binary
-install(TARGETS ttree2hdf5 convert2hdf5
-  RUNTIME DESTINATION bin
+install(TARGETS HdfTuple HdfTuple-static
   ARCHIVE DESTINATION lib
-  PUBLIC_HEADER DESTINATION include)
-install(FILES ${CMAKE_BINARY_DIR}/libStl_rdict.pcm DESTINATION bin)
+  LIBRARY DESTINATION lib)
+install(DIRECTORY include/ DESTINATION include)
+
+# _______________________________________________________________________
+# ROOT stuff
+#
+# this can be disabled if we just want the library to write out HDF5,
+# or for CI tests
+#
+option( ROOT_DEPENDANTS "Enable converter from ROOT (requires ROOT)" ON )
+if( NOT ROOT_DEPENDANTS )
+  message(STATUS "Disabled root dependants")
+else()
+  # find root
+  list(APPEND CMAKE_PREFIX_PATH $ENV{ROOTSYS})
+  find_package(ROOT REQUIRED COMPONENTS RIO Hist Tree Net Core)
+  # make root dicts
+  include(${ROOT_USE_FILE})
+  ROOT_GENERATE_DICTIONARY(G__Stl src/Stl.h LINKDEF src/LinkDef.h)
+
+  # find boost
+  set(Boost_USE_STATIC_LIBS ON)
+  find_package( Boost 1.54.0 REQUIRED COMPONENTS program_options)
+
+  set( lib_sources
+    src/copy_root_tree.cxx
+    src/get_tree.cxx
+    src/tree_copy_opts.cxx
+    src/ttree2hdf5.cxx
+    src/unshittify.cxx)
+
+  # build main library
+  add_library( convert2hdf5 STATIC ${lib_sources})
+  target_link_libraries(convert2hdf5
+    HdfTuple-static
+    ${Boost_LIBRARIES}
+    ${ROOT_LIBRARIES})
+  target_include_directories( convert2hdf5
+    PRIVATE ${HDF5_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
+    ${ROOT_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+  if(BUILTIN_HDF5)
+    add_dependencies( convert2hdf5 HDF5 )
+  endif()
+
+  # build top level executable
+  add_executable(ttree2hdf5 src/ttree2hdf5.cxx G__Stl.cxx)
+  target_link_libraries(ttree2hdf5 convert2hdf5)
+
+  # install binary
+  install(TARGETS ttree2hdf5 convert2hdf5
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION lib
+    PUBLIC_HEADER DESTINATION include)
+  install(FILES ${CMAKE_BINARY_DIR}/libStl_rdict.pcm DESTINATION bin)
+endif()
