@@ -70,21 +70,21 @@ endif()
 #
 # We build two, one static and one shared
 #
-add_library(HdfTuple SHARED src/HdfTuple.cxx)
-target_link_libraries(HdfTuple ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
-target_include_directories(HdfTuple
+add_library(HdfTuple-shared SHARED src/HdfTuple.cxx)
+target_link_libraries(HdfTuple-shared ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
+target_include_directories(HdfTuple-shared
   PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 
 add_library(HdfTuple-static STATIC src/HdfTuple.cxx)
 target_link_libraries(HdfTuple-static ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
-target_include_directories(HdfTuple
+target_include_directories(HdfTuple-static
   PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 
 if(BUILTIN_HDF5)
-  add_dependencies( HdfTuple HDF5 )
+  add_dependencies( HdfTuple-shared HDF5 )
   add_dependencies( HdfTuple-static HDF5 )
 endif()
-install(TARGETS HdfTuple HdfTuple-static
+install(TARGETS HdfTuple-shared HdfTuple-static
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)
 install(DIRECTORY include/ DESTINATION include)
