@@ -18,6 +18,10 @@ include_directories(include src)
 # find zlib
 find_package( ZLIB REQUIRED )
 get_filename_component(ZLIB_LIB_DIR ZLIB_LIBRARIES DIRECTORY)
+# TODO: figure out how to use this in the hdf5 builder. We should pass
+# it an option like `--with-zlib=${ZLIB_INCLUDE_DIRS},${ZLIB_LIB_DIR}`
+# but this screws up on some systems because the strings from FindZLIB
+# are generators
 
 # find HDF5
 #
@@ -45,7 +49,8 @@ else()
       URL "https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz"
       URL_MD5 "7f568e2464d4ab0a74d16b23956d900b"
       BUILD_IN_SOURCE 1
-      CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR> --enable-cxx --with-zlib=${ZLIB_INCLUDE_DIRS},${ZLIB_LIB_DIR}
+      CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR>
+      --enable-cxx
       BUILD_COMMAND make -j${NProcs}
       INSTALL_COMMAND make install)
     set(H5_LOC ${CMAKE_BINARY_DIR}/externals/hdf5)
@@ -70,23 +75,27 @@ endif()
 #
 # We build two, one static and one shared
 #
-add_library(HdfTuple-shared SHARED src/HdfTuple.cxx)
-target_link_libraries(HdfTuple-shared ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
-target_include_directories(HdfTuple-shared
-  PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+option(BUILD_SHARED_HDFTUPLE "Build shared library for hdf5 tuple" ON)
+if( BUILD_SHARED_HDFTUPLE )
+  add_library(HdfTuple-shared SHARED src/HdfTuple.cxx)
+  target_link_libraries(HdfTuple-shared ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
+  target_include_directories(HdfTuple-shared
+    PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+endif()
 
 add_library(HdfTuple-static STATIC src/HdfTuple.cxx)
 target_link_libraries(HdfTuple-static ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
 target_include_directories(HdfTuple-static
   PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 
-if(BUILTIN_HDF5)
+add_dependencies( HdfTuple-static HDF5 )
+
+if( BUILD_SHARED_HDFTUPLE )
   add_dependencies( HdfTuple-shared HDF5 )
-  add_dependencies( HdfTuple-static HDF5 )
+  install(TARGETS HdfTuple-shared LIBRARY DESTINATION lib)
 endif()
-install(TARGETS HdfTuple-shared HdfTuple-static
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib)
+
+install( TARGETS HdfTuple-static ARCHIVE DESTINATION lib )
 install(DIRECTORY include/ DESTINATION include)
 
 # _______________________________________________________________________
