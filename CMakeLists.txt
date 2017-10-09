@@ -39,13 +39,14 @@ else()
       message(" *** Processor count failed, using 1 core *** ")
       set(NProcs 1)
     endif()
+    cmake_host_system_information(RESULT HOST QUERY HOSTNAME)
     include( ExternalProject )
     ExternalProject_Add( HDF5
       PREFIX ${CMAKE_BINARY_DIR}/externals/hdf5
       URL "https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz"
       URL_MD5 "7f568e2464d4ab0a74d16b23956d900b"
       BUILD_IN_SOURCE 1
-      CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR> --enable-cxx --with-zlib=${ZLIB_INCLUDE_DIRS},${ZLIB_LIB_DIR}
+      CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR> --enable-cxx --with-zlib=${ZLIB_INCLUDE_DIRS},${ZLIB_LIB_DIR} --host=${HOST}
       BUILD_COMMAND make -j${NProcs}
       INSTALL_COMMAND make install)
     set(H5_LOC ${CMAKE_BINARY_DIR}/externals/hdf5)
