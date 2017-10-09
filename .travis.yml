@@ -11,7 +11,7 @@ notifications:
 
 env:
   - BUILD=./scripts/travis-build-cmake.sh
-  # - MINIMAL=1 BUILD=./scripts/travis-build-cmake.sh
+  - MINIMAL=1 BUILD=./scripts/travis-build-cmake.sh
 
 script:
   - $BUILD
