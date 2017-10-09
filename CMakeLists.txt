@@ -60,6 +60,9 @@ if( BUILTIN_HDF5 )
     --enable-cxx
     BUILD_COMMAND make -j${NProcs}
     INSTALL_COMMAND make install
+    LOG_INSTALL 1
+    LOG_DOWNLOAD 1
+    LOG_BUILD 1
     BUILD_BYPRODUCTS ${HDF5_LIBRARIES} )
 else()
   find_package( HDF5 1.8.12 REQUIRED COMPONENTS CXX HL)
@@ -77,12 +80,18 @@ if( BUILD_SHARED_HDFTUPLE )
   target_include_directories(HdfTuple-shared
     PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
   install(TARGETS HdfTuple-shared LIBRARY DESTINATION lib)
+  if( BUILTIN_HDF5 )
+    add_dependencies(HdfTuple-shared HDF5)
+  endif()
 endif()
 add_library(HdfTuple-static STATIC src/HdfTuple.cxx)
 target_link_libraries(HdfTuple-static ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
 target_include_directories(HdfTuple-static
   PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
 install( TARGETS HdfTuple-static ARCHIVE DESTINATION lib )
+if( BUILTIN_HDF5 )
+  add_dependencies(HdfTuple-static HDF5)
+endif()
 
 install(DIRECTORY include/ DESTINATION include)
 
