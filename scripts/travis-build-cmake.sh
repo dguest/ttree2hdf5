@@ -17,7 +17,7 @@ pushd .
 cd build
 ARGS='-DROOT_DEPENDANTS=OFF'
 if [[ ${MINIMAL+x} ]]; then
-    ARGS="${ARGS} -DH5_LOC=BUILTIN"
+    ARGS="${ARGS} -DBUILTIN_HDF5=TRUE"
 fi
 cmake ${ARGS} ..
 make -j 4

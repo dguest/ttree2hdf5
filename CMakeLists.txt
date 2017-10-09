@@ -30,49 +30,43 @@ get_filename_component(ZLIB_LIB_DIR ZLIB_LIBRARIES DIRECTORY)
 #
 # https://sft.its.cern.ch/jira/browse/SPI-984
 #
-set(H5_LOC "FIND" CACHE STRING "Directory where HDF5 lives (or BUILTIN)")
-if(H5_LOC STREQUAL "FIND")
-  find_package( HDF5 1.8.12 REQUIRED COMPONENTS CXX HL)
-else()
-  if(H5_LOC STREQUAL "BUILTIN")
-    # one option is to build HDF5 here
-    set(H5_LOC ${CMAKE_BINARY_DIR}/externals/hdf5)
-    set( HDF5_INCLUDE_DIRS "${H5_LOC}/include/")
-    set( HDF5_LIB "${H5_LOC}/lib/")
-    set( SUFFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
-    set( HDF5_LIBRARIES
-      ${HDF5_LIB}/libhdf5_cpp${SUFFFIX} ${HDF5_LIB}/libhdf5${SUFFFIX} )
+option(BUILTIN_HDF5 "Build hdf5 internally" NO)
+if( BUILTIN_HDF5 )
+  # one option is to build HDF5 here
+  set( H5_LOC ${CMAKE_BINARY_DIR}/externals/hdf5 )
+  set( HDF5_INCLUDE_DIRS "${H5_LOC}/include/")
+  set( HDF5_LIB "${H5_LOC}/lib/")
+  set( SUFFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
+  set( HDF5_LIBRARIES
+    ${HDF5_LIB}/libhdf5_cpp${SUFFFIX} ${HDF5_LIB}/libhdf5${SUFFFIX} )
 
-    # count processors
-    include(ProcessorCount)
-    ProcessorCount(NProcs)
-    message(STATUS "Building HDF5 with ${NProcs} cores")
-    if(NProcs EQUAL 0)
-      message(" *** Processor count failed, using 1 core *** ")
-      set(NProcs 1)
-    endif()
-    include( ExternalProject )
+  # export to parent scope
+  set( HDF5_LIBRARIES ${HDF5_LIBRARIES} PARENT_SCOPE )
+  set( HDF5_INCLUDE_DIRS ${HDF5_INCLUDE_DIRS} PARENT_SCOPE )
 
-    # add the external
-    ExternalProject_Add( HDF5
-      PREFIX ${H5_LOC}
-      URL "https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz"
-      URL_MD5 "7f568e2464d4ab0a74d16b23956d900b"
-      BUILD_IN_SOURCE 1
-      CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR>
-      --enable-cxx
-      BUILD_COMMAND make -j${NProcs}
-      INSTALL_COMMAND make install
-      BUILD_BYPRODUCTS ${HDF5_LIBRARIES} )
-  elseif(NOT IS_DIRECTORY ${H5_LOC})
-    message(FATAL_ERROR "HDF5 path ${H5_LOC} does not point to a directory")
-    set( HDF5_INCLUDE_DIRS "${H5_LOC}/include/")
-    set( HDF5_LIB "${H5_LOC}/lib/")
-    set( HDF5_LIBRARIES
-      ${HDF5_LIB}/libhdf5_cpp${CMAKE_SHARED_LIBRARY_SUFFIX}
-      ${HDF5_LIB}/libhdf5${CMAKE_SHARED_LIBRARY_SUFFIX} )
+  # count processors
+  include(ProcessorCount)
+  ProcessorCount(NProcs)
+  message(STATUS "Building HDF5 with ${NProcs} cores")
+  if(NProcs EQUAL 0)
+    message(" *** Processor count failed, using 1 core *** ")
+    set(NProcs 1)
   endif()
-  # if not a custom build, take the path to be user defined
+  include( ExternalProject )
+
+  # add the external
+  ExternalProject_Add( HDF5
+    PREFIX ${H5_LOC}
+    URL "https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz"
+    URL_MD5 "7f568e2464d4ab0a74d16b23956d900b"
+    BUILD_IN_SOURCE 1
+    CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR>
+    --enable-cxx
+    BUILD_COMMAND make -j${NProcs}
+    INSTALL_COMMAND make install
+    BUILD_BYPRODUCTS ${HDF5_LIBRARIES} )
+else()
+  find_package( HDF5 1.8.12 REQUIRED COMPONENTS CXX HL)
 endif()
 
 

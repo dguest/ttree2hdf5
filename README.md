@@ -52,17 +52,12 @@ If you don't have access to HDF5, you can tell CMake to build it by
 replacing the `cmake ..` line with
 
 ```
-cmake -DH5_LOC=BUILTIN ..
+cmake -DBUILTIN_HDF5=TRUE ..
 ```
 
 Note that this takes about 10 minutes. If you already have HDF5 built
-somewhere, you can also use
-
-```
-cmake -DH5_LOC=${HDF_ROOT} ..
-```
-
-where `HDF_ROOT` must point to the HDF5 directory.
+somewhere, you can also add the executables to your path: cmake should
+find them.
 
 Building in Special Environments
 --------------------------------
