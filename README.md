@@ -76,8 +76,8 @@ Since we don't currently have HDF5 working in LCG (see this
 compatible with the above setup script. Run
 
 ```
-HDF_ROOT=/afs/cern.ch/user/d/dguest/afswork/public/hdf5/hdf5-1.8.19/install/
-cmake -DH5_LOC=${HDF_ROOT} ..
+HDF5_ROOT=/afs/cern.ch/user/d/dguest/afswork/public/hdf5/hdf5-1.8.19/install/
+HDF5_ROOT=${HDF5_ROOT} cmake ..
 ```
 
 And be sure to complain to LCG so they fix their HDF5 installation.
