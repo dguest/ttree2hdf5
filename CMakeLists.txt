@@ -36,6 +36,14 @@ if(H5_LOC STREQUAL "FIND")
 else()
   if(H5_LOC STREQUAL "BUILTIN")
     # one option is to build HDF5 here
+    set(H5_LOC ${CMAKE_BINARY_DIR}/externals/hdf5)
+    set( HDF5_INCLUDE_DIRS "${H5_LOC}/include/")
+    set( HDF5_LIB "${H5_LOC}/lib/")
+    set( SUFFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
+    set( HDF5_LIBRARIES
+      ${HDF5_LIB}/libhdf5_cpp${SUFFFIX} ${HDF5_LIB}/libhdf5${SUFFFIX} )
+
+    # count processors
     include(ProcessorCount)
     ProcessorCount(NProcs)
     message(STATUS "Building HDF5 with ${NProcs} cores")
@@ -44,30 +52,27 @@ else()
       set(NProcs 1)
     endif()
     include( ExternalProject )
+
+    # add the external
     ExternalProject_Add( HDF5
-      PREFIX ${CMAKE_BINARY_DIR}/externals/hdf5
+      PREFIX ${H5_LOC}
       URL "https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz"
       URL_MD5 "7f568e2464d4ab0a74d16b23956d900b"
       BUILD_IN_SOURCE 1
       CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR>
       --enable-cxx
       BUILD_COMMAND make -j${NProcs}
-      INSTALL_COMMAND make install)
-    set(H5_LOC ${CMAKE_BINARY_DIR}/externals/hdf5)
-    set(BUILTIN_HDF5 TRUE)
+      INSTALL_COMMAND make install
+      BUILD_BYPRODUCTS ${HDF5_LIBRARIES} )
   elseif(NOT IS_DIRECTORY ${H5_LOC})
     message(FATAL_ERROR "HDF5 path ${H5_LOC} does not point to a directory")
+    set( HDF5_INCLUDE_DIRS "${H5_LOC}/include/")
+    set( HDF5_LIB "${H5_LOC}/lib/")
+    set( HDF5_LIBRARIES
+      ${HDF5_LIB}/libhdf5_cpp${CMAKE_SHARED_LIBRARY_SUFFIX}
+      ${HDF5_LIB}/libhdf5${CMAKE_SHARED_LIBRARY_SUFFIX} )
   endif()
   # if not a custom build, take the path to be user defined
-  set( HDF5_INCLUDE_DIRS "${H5_LOC}/include/")
-  set( HDF5_LIB "${H5_LOC}/lib/")
-  if(BUILTIN_HDF5)
-    set( SUFFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
-  else()
-    set( SUFFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
-  endif()
-  set( HDF5_LIBRARIES
-    ${HDF5_LIB}/libhdf5_cpp${SUFFFIX} ${HDF5_LIB}/libhdf5${SUFFFIX} )
 endif()
 
 
@@ -81,21 +86,14 @@ if( BUILD_SHARED_HDFTUPLE )
   target_link_libraries(HdfTuple-shared ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
   target_include_directories(HdfTuple-shared
     PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+  install(TARGETS HdfTuple-shared LIBRARY DESTINATION lib)
 endif()
-
 add_library(HdfTuple-static STATIC src/HdfTuple.cxx)
 target_link_libraries(HdfTuple-static ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
 target_include_directories(HdfTuple-static
   PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
-
-add_dependencies( HdfTuple-static HDF5 )
-
-if( BUILD_SHARED_HDFTUPLE )
-  add_dependencies( HdfTuple-shared HDF5 )
-  install(TARGETS HdfTuple-shared LIBRARY DESTINATION lib)
-endif()
-
 install( TARGETS HdfTuple-static ARCHIVE DESTINATION lib )
+
 install(DIRECTORY include/ DESTINATION include)
 
 # _______________________________________________________________________
@@ -135,9 +133,6 @@ else()
   target_include_directories( convert2hdf5
     PRIVATE ${HDF5_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}
     ${ROOT_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
-  if(BUILTIN_HDF5)
-    add_dependencies( convert2hdf5 HDF5 )
-  endif()
 
   # build top level executable
   add_executable(ttree2hdf5 src/ttree2hdf5.cxx G__Stl.cxx)
