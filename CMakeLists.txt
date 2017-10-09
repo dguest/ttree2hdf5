@@ -40,10 +40,6 @@ if( BUILTIN_HDF5 )
   set( HDF5_LIBRARIES
     ${HDF5_LIB}/libhdf5_cpp${SUFFFIX} ${HDF5_LIB}/libhdf5${SUFFFIX} )
 
-  # export to parent scope
-  set( HDF5_LIBRARIES ${HDF5_LIBRARIES} PARENT_SCOPE )
-  set( HDF5_INCLUDE_DIRS ${HDF5_INCLUDE_DIRS} PARENT_SCOPE )
-
   # count processors
   include(ProcessorCount)
   ProcessorCount(NProcs)
