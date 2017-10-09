@@ -17,7 +17,8 @@ pushd .
 cd build
 ARGS='-DROOT_DEPENDANTS=OFF'
 if [[ ${MINIMAL+x} ]]; then
-    ARGS="${ARGS} -DBUILTIN_HDF5=TRUE"
+    # TODO: figure out why the shared one doesn't work on ubuntu
+    ARGS="${ARGS} -DBUILTIN_HDF5=TRUE -DBUILD_SHARED_HDFTUPLE=FALSE"
 fi
 cmake ${ARGS} ..
 make -j 4
