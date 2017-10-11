@@ -60,20 +60,24 @@ if( BUILTIN_HDF5 )
     --enable-cxx
     BUILD_COMMAND make -j${NProcs}
     INSTALL_COMMAND make install
-    LOG_INSTALL 1
     LOG_DOWNLOAD 1
+    LOG_CONFIGURE 1
     LOG_BUILD 1
+    LOG_INSTALL 1
     BUILD_BYPRODUCTS ${HDF5_LIBRARIES} )
 else()
   find_package( HDF5 1.8.12 REQUIRED COMPONENTS CXX HL)
 endif()
+
+# CMake often finds the wrong include directories (i.e. on lxplus)
+include_directories(BEFORE SYSTEM ${HDF5_INCLUDE_DIRS})
 
 
 # Add the hdf tuple wrapper
 #
 # We build two, one static and one shared
 #
-option(BUILD_SHARED_HDFTUPLE "Build shared library for hdf5 tuple" ON)
+option(BUILD_SHARED_HDFTUPLE "Build shared library for hdf5 tuple" OFF)
 if( BUILD_SHARED_HDFTUPLE )
   add_library(HdfTuple-shared SHARED src/HdfTuple.cxx)
   target_link_libraries(HdfTuple-shared ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
@@ -93,7 +97,13 @@ if( BUILTIN_HDF5 )
   add_dependencies(HdfTuple-static HDF5)
 endif()
 
-install(DIRECTORY include/ DESTINATION include)
+install( DIRECTORY include/ DESTINATION include)
+
+# set the RPATH so that libraries don't get lost
+option( INSTALL_RPATH "Include dependencies in rpath when installing" OFF )
+if( INSTALL_RPATH )
+  SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+endif()
 
 # _______________________________________________________________________
 # ROOT stuff
@@ -142,5 +152,11 @@ else()
     RUNTIME DESTINATION bin
     ARCHIVE DESTINATION lib
     PUBLIC_HEADER DESTINATION include)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libStl_rdict.pcm DESTINATION bin)
+
+  # it's not clear to me where this '.pcm' file is supposed to go, so
+  # we put it in a few places and hopefully the user includes one of
+  # them.
+  set( PCM_FILE ${CMAKE_CURRENT_BINARY_DIR}/libStl_rdict.pcm)
+  install(FILES ${PCM_FILE} DESTINATION bin)
+  install(FILES ${PCM_FILE} DESTINATION lib)
 endif()

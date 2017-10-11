@@ -5,6 +5,11 @@ export ATLAS_LOCAL_ROOT_BASE=/cvmfs/atlas.cern.ch/repo/ATLASLocalRootBase
 . ${ATLAS_LOCAL_ROOT_BASE}/user/atlasLocalSetup.sh -q
 echo " done"
 
+HDF5_ROOT=/afs/cern.ch/user/d/dguest/afswork/public/hdf5/hdf5-1.8.19/install/
+echo "set HDF5_ROOT to ${HDF5_ROOT}"
+
+echo "================ setting up CMake ======================"
+lsetup cmake
 echo "============ setting up AnalysisBaseExternals =========="
 asetup AnalysisBaseExternals,21.2.4
 echo "====================== Done ============================"
