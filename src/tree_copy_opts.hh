@@ -22,7 +22,12 @@ struct IOOpts
   std::string tree;
 };
 
-std::tuple<TreeCopyOpts, IOOpts> get_tree_copy_opts(
-  int argc, char* argv[]);
+struct AppOpts
+{
+  TreeCopyOpts tree;
+  IOOpts file;
+};
+
+AppOpts get_tree_copy_opts(int argc, char* argv[]);
 
 #endif
