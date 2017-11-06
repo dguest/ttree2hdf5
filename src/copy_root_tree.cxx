@@ -96,7 +96,7 @@ private:
 // Note that this means the event loop happens last: most of the work
 // is just setting up the read and write buffers.
 
-void copy_root_tree(TTree& tt, H5::CommonFG& fg, const TreeCopyOpts& opts) {
+void copy_root_tree(TTree& tt, H5::Group& fg, const TreeCopyOpts& opts) {
 
   // define the buffers for root to read into
   std::vector<std::unique_ptr<IBuffer> > buffers;

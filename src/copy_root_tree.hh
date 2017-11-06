@@ -6,9 +6,9 @@
 class TTree;
 
 namespace H5 {
-  class CommonFG;
+  class Group;
 }
 
-void copy_root_tree(TTree& tt, H5::CommonFG& fg, const TreeCopyOpts& opts);
+void copy_root_tree(TTree& tt, H5::Group& fg, const TreeCopyOpts& opts);
 
 #endif
