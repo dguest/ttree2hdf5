@@ -139,7 +139,7 @@ void VariableFillers::add(const std::string& name,
 
 class WriterXd {
 public:
-  WriterXd(H5::CommonFG& group, const std::string& name,
+  WriterXd(H5::Group& group, const std::string& name,
            VariableFillers fillers,
            std::vector<hsize_t> dataset_dimensions,
            hsize_t chunk_size = 2048);

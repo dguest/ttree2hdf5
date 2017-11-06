@@ -82,7 +82,7 @@ namespace {
 
 std::vector<size_t> WriterXd::NONE = {};
 
-WriterXd::WriterXd(H5::CommonFG& group, const std::string& name,
+WriterXd::WriterXd(H5::Group& group, const std::string& name,
                    VariableFillers fillers,
                    std::vector<hsize_t> max_length,
                    hsize_t batch_size):
