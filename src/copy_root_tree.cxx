@@ -236,8 +236,17 @@ void copy_root_tree(TTree& tt, H5::Group& fg, const TreeCopyOpts& opts) {
   // defined, as are the HDF5 reader functions.
   //
   size_t n_entries = tt.GetEntries();
+  int print_interval = opts.print_interval;
+  if (print_interval == -1) {
+    print_interval = std::max(1UL, n_entries / 100);
+  }
   for (size_t iii = 0; iii < n_entries; iii++) {
     if (opts.n_entries && iii >= opts.n_entries) break;
+    if (print_interval && (iii % print_interval == 0)) {
+      std::cout << "events processed: " << iii
+                << " (" << std::round(iii*1e2 / n_entries) << "%)"
+                << std::endl;
+    }
     tt.GetEntry(iii);
     if (writer1d) writer1d->fill_while_incrementing();
     if (writer2d) writer2d->fill_while_incrementing(idx);

@@ -13,11 +13,12 @@ struct TreeCopyOpts
   size_t chunk_size;
   size_t n_entries;
   bool verbose;
+  int print_interval;
 };
 
 struct IOOpts
 {
-  std::string in;
+  std::vector<std::string> in;
   std::string out;
   std::string tree;
 };

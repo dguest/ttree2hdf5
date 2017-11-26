@@ -6,12 +6,12 @@ AppOpts get_tree_copy_opts(int argc, char* argv[])
 {
   namespace po = boost::program_options;
   AppOpts app;
-  std::string usage = "usage: " + std::string(argv[0]) + " <file>"
+  std::string usage = "usage: " + std::string(argv[0]) + " <files>..."
     + " -o <output> [-h] [opts...]\n";
   po::options_description opt(usage + "\nConvert a root tree to HDF5");
   opt.add_options()
     ("in-file",
-     po::value(&app.file.in)->required(),
+     po::value(&app.file.in)->required()->multitoken(),
      "input file name")
     ("out-file,o",
      po::value(&app.file.out)->required(),
@@ -35,6 +35,10 @@ AppOpts get_tree_copy_opts(int argc, char* argv[])
     ("chunk-size,c",
      po::value(&app.tree.chunk_size)->default_value(CHUNK_SIZE),
      "chunk size in HDF5 file")
+    ("print-interval,p",
+     po::value(&app.tree.print_interval)->default_value(0, "never")->implicit_value(-1, "1%"),
+     "print progress")
+
     ;
   po::positional_options_description pos_opts;
   pos_opts.add("in-file", -1);
