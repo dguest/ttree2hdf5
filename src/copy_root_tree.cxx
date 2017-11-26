@@ -162,12 +162,18 @@ void copy_root_tree(TTree& tt, H5::Group& fg, const TreeCopyOpts& opts) {
       buffers.emplace_back(new Buffer<double>(vars, tt, lname));
     } else if (leaf_type == "Bool_t") {
       buffers.emplace_back(new Buffer<bool>(vars, tt, lname));
+    } else if (leaf_type == "Long64_t") {
+      buffers.emplace_back(new Buffer<long long>(vars, tt, lname));
+    } else if (leaf_type == "UInt_t") {
+      buffers.emplace_back(new Buffer<unsigned int>(vars, tt, lname));
     } else if (leaf_type == "vector<float>") {
       buffers.emplace_back(new VBuf<float>(vars2d, idx, tt, lname, NAN));
     } else if (leaf_type == "vector<double>") {
       buffers.emplace_back(new VBuf<double>(vars2d, idx, tt, lname, NAN));
     } else if (leaf_type == "vector<int>") {
       buffers.emplace_back(new VBuf<int>(vars2d, idx, tt, lname, 0));
+    } else if (leaf_type == "vector<unsigned int>") {
+      buffers.emplace_back(new VBuf<unsigned int>(vars2d, idx, tt, lname, 0));
     } else if (leaf_type == "vector<bool>") {
       buffers.emplace_back(new VBuf<bool>(vars2d, idx, tt, lname, 0));
     } else if (leaf_type == "vector<vector<int> >") {

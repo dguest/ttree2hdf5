@@ -17,6 +17,7 @@
 union data_buffer_t
 {
   int _int;
+  long long _llong;
   unsigned int _uint;
   float _float;
   double _double;
@@ -31,18 +32,34 @@ union data_buffer_t
 
 template <typename T> H5::DataType get_type();
 template<> H5::DataType get_type<int>();
+template<> H5::DataType get_type<long long>();
 template<> H5::DataType get_type<unsigned int>();
 template<> H5::DataType get_type<float>();
 template<> H5::DataType get_type<double>();
 template<> H5::DataType get_type<bool>();
 
+// check to make sure one of the above specializations is used
+template<typename T>
+H5::DataType get_type() {
+  static_assert(sizeof(T) != sizeof(T), "you must override this class");
+  return H5::DataType();
+}
+
 template <typename T>
 T& get_ref(data_buffer_t& buf);
 template<> int& get_ref<int>(data_buffer_t& buf);
+template<> long long& get_ref<long long>(data_buffer_t& buf);
 template<> unsigned int& get_ref<unsigned int>(data_buffer_t& buf);
 template<> float& get_ref<float>(data_buffer_t& buf);
 template<> double& get_ref<double>(data_buffer_t& buf);
 template<> bool& get_ref<bool>(data_buffer_t& buf);
+
+// check to make sure one of the above specializations is used
+template <typename T>
+T& get_ref(data_buffer_t& buf) {
+  static_assert(sizeof(T) != sizeof(T), "you must override this class");
+  return T();
+}
 
 // This is used to buld the unions we use to build the hdf5 memory
 // buffer. Together with the `get_type` templates it gives us a
