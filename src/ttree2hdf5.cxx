@@ -2,8 +2,6 @@
 #include "get_tree.hh"
 #include "tree_copy_opts.hh"
 
-#include "unshittify.hh"
-
 #include "H5Cpp.h"
 
 #include "TFile.h"
@@ -13,7 +11,6 @@
 #include <memory>
 
 int main(int argc, char* argv[]) {
-  unshittify();
   AppOpts opts = get_tree_copy_opts(argc, argv);
 
   // Read in the root tree. We pick whatever tree is on the top level

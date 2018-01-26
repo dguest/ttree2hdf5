@@ -44,8 +44,7 @@ set( lib_sources
   src/copy_root_tree.cxx
   src/get_tree.cxx
   src/tree_copy_opts.cxx
-  src/ttree2hdf5.cxx
-  src/unshittify.cxx)
+  src/ttree2hdf5.cxx)
 
 # build main library
 add_library( convert2hdf5 STATIC ${lib_sources})
