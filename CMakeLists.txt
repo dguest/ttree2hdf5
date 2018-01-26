@@ -15,63 +15,19 @@ set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic" )
 
 include_directories(include src)
 
-# find zlib
-find_package( ZLIB REQUIRED )
-get_filename_component(ZLIB_LIB_DIR ZLIB_LIBRARIES DIRECTORY)
-# TODO: figure out how to use this in the hdf5 builder. We should pass
-# it an option like `--with-zlib=${ZLIB_INCLUDE_DIRS},${ZLIB_LIB_DIR}`
-# but this screws up on some systems because the strings from FindZLIB
-# are generators
+# one option is to build HDF5 here
+set( H5_LOC $ENV{AnalysisBaseExternals_DIR} )
+set( HDF5_INCLUDE_DIRS "${H5_LOC}/include/")
+set( HDF5_LIB "${H5_LOC}/lib/")
+set( SUFFFIX -shared${CMAKE_SHARED_LIBRARY_SUFFIX})
+# set( HDF5_LIBRARIES
+#   ${HDF5_LIB}/libhdf5_cpp${SUFFFIX} ${HDF5_LIB}/libhdf5${SUFFFIX} )
+set( HDF5_LIBRARIES
+  ${HDF5_LIB}/libhdf5_cpp${SUFFFIX} ${HDF5_LIB}/libhdf5${SUFFFIX} )
 
-# find HDF5
-#
-# Ideally we would like to use find_package, but in ATLAS code we're
-# waiting on a fix for this here:
-#
-# https://sft.its.cern.ch/jira/browse/SPI-984
-#
-option(BUILTIN_HDF5 "Build hdf5 internally" NO)
-if( BUILTIN_HDF5 )
-  # one option is to build HDF5 here
-  set( H5_LOC ${CMAKE_BINARY_DIR}/externals/hdf5 )
-  set( HDF5_INCLUDE_DIRS "${H5_LOC}/include/")
-  set( HDF5_LIB "${H5_LOC}/lib/")
-  set( SUFFFIX ${CMAKE_STATIC_LIBRARY_SUFFIX})
-  set( HDF5_LIBRARIES
-    ${HDF5_LIB}/libhdf5_cpp${SUFFFIX} ${HDF5_LIB}/libhdf5${SUFFFIX} )
-
-  # count processors
-  include(ProcessorCount)
-  ProcessorCount(NProcs)
-  message(STATUS "Building HDF5 with ${NProcs} cores")
-  if(NProcs EQUAL 0)
-    message(" *** Processor count failed, using 1 core *** ")
-    set(NProcs 1)
-  endif()
-  include( ExternalProject )
-
-  # add the external
-  ExternalProject_Add( HDF5
-    PREFIX ${H5_LOC}
-    URL "https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.gz"
-    URL_MD5 "7f568e2464d4ab0a74d16b23956d900b"
-    BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND <SOURCE_DIR>/configure --prefix=<INSTALL_DIR>
-    --enable-cxx
-    BUILD_COMMAND make -j${NProcs}
-    INSTALL_COMMAND make install
-    LOG_DOWNLOAD 1
-    LOG_CONFIGURE 1
-    LOG_BUILD 1
-    LOG_INSTALL 1
-    BUILD_BYPRODUCTS ${HDF5_LIBRARIES} )
-else()
-  find_package( HDF5 1.8.12 REQUIRED COMPONENTS CXX HL)
-endif()
-
-# CMake often finds the wrong include directories (i.e. on lxplus)
-include_directories(BEFORE SYSTEM ${HDF5_INCLUDE_DIRS})
-
+# # export to parent scope
+# set( HDF5_LIBRARIES ${HDF5_LIBRARIES} PARENT_SCOPE )
+# set( HDF5_INCLUDE_DIRS ${HDF5_INCLUDE_DIRS} PARENT_SCOPE )
 
 # Add the hdf tuple wrapper
 #
