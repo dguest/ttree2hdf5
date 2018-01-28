@@ -33,55 +33,13 @@ Setup
 =====
 
 The dependencies are HDF5 (C++ interfaces required), boost (for
-`program_options`) and ROOT. If these are available on your system you
-can build with `make`.
+`program_options`) and ROOT.
 
-Building with CMake
--------------------
+This version of the package is meant for inclusion in ATLAS code, so
+the setup follows the standard setup for ATLAS releases. For the
+package this is based off (which can compile independently) see here:
 
-We also include a CMake file. Run
-
-```
-mkdir build
-cd build
-cmake ..
-make -j 4
-```
-
-If you don't have access to HDF5, you can tell CMake to build it by
-replacing the `cmake ..` line with
-
-```
-cmake -DBUILTIN_HDF5=TRUE ..
-```
-
-Note that this takes about 10 minutes. If you already have HDF5 built
-somewhere, you can also add the executables to your path: cmake should
-find them.
-
-Building in Special Environments
---------------------------------
-
-Here **we count LHC experiments like ATLAS as "special"**: you
-typically need to figure out how to find everything on
-`/cvmfs/`. There are scripts to setup these environments in `setup/`,
-e.g.:
-
-```
-source setup/atlas-cvmfs.sh
-```
-
-Since we don't currently have HDF5 working in LCG (see this
-[JIRA issue][1]) I've built a version on AFS which should be
-compatible with the above setup script. Run
-
-```
-HDF5_ROOT=${HDF5_ROOT} cmake ..
-```
-
-And be sure to complain to LCG so they fix their HDF5 installation.
-
-[1]: https://sft.its.cern.ch/jira/browse/SPI-984
+https://github.com/dguest/ttree2hdf5
 
 
 Hacking This Code
