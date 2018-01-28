@@ -9,7 +9,7 @@
 // understand what is going on.
 //
 
-#include "HdfTuple.hh"
+#include "HDF5Utils/HdfTuple.hh"
 
 #include "TFile.h"
 #include "TTree.h"
