@@ -22,6 +22,10 @@ H5::DataType get_type<unsigned int>() {
   return H5::PredType::NATIVE_UINT;
 }
 template<>
+H5::DataType get_type<unsigned char>() {
+  return H5::PredType::NATIVE_UCHAR;
+}
+template<>
 H5::DataType get_type<double>() {
   return H5::PredType::NATIVE_DOUBLE;
 }
@@ -40,6 +44,9 @@ template<> int& get_ref<int>(data_buffer_t& buf) {
 }
 template<> long long& get_ref<long long>(data_buffer_t& buf) {
   return buf._llong;
+}
+template<> unsigned char& get_ref<unsigned char>(data_buffer_t& buf) {
+  return buf._uchar;
 }
 template<> unsigned int& get_ref<unsigned int>(data_buffer_t& buf) {
   return buf._uint;

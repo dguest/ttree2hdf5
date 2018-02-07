@@ -19,6 +19,7 @@ union data_buffer_t
   int _int;
   long long _llong;
   unsigned int _uint;
+  unsigned char _uchar;
   float _float;
   double _double;
   bool _bool;
@@ -31,9 +32,10 @@ union data_buffer_t
 // templates are defined in the cxx file.
 
 template <typename T> H5::DataType get_type();
-template<> H5::DataType get_type<int>();
-template<> H5::DataType get_type<long long>();
+template<> H5::DataType get_type<unsigned char>();
 template<> H5::DataType get_type<unsigned int>();
+template<> H5::DataType get_type<long long>();
+template<> H5::DataType get_type<int>();
 template<> H5::DataType get_type<float>();
 template<> H5::DataType get_type<double>();
 template<> H5::DataType get_type<bool>();
@@ -49,6 +51,7 @@ template <typename T>
 T& get_ref(data_buffer_t& buf);
 template<> int& get_ref<int>(data_buffer_t& buf);
 template<> long long& get_ref<long long>(data_buffer_t& buf);
+template<> unsigned char& get_ref<unsigned char>(data_buffer_t& buf);
 template<> unsigned int& get_ref<unsigned int>(data_buffer_t& buf);
 template<> float& get_ref<float>(data_buffer_t& buf);
 template<> double& get_ref<double>(data_buffer_t& buf);
