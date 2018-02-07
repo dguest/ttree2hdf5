@@ -19,6 +19,7 @@ union data_buffer_t
   int _int;
   long long _llong;
   unsigned int _uint;
+  unsigned char _uchar;
   float _float;
   double _double;
   bool _bool;
@@ -34,6 +35,7 @@ template <typename T> H5::DataType get_type();
 template<> H5::DataType get_type<int>();
 template<> H5::DataType get_type<long long>();
 template<> H5::DataType get_type<unsigned int>();
+template<> H5::DataType get_type<unsigned char>();
 template<> H5::DataType get_type<float>();
 template<> H5::DataType get_type<double>();
 template<> H5::DataType get_type<bool>();

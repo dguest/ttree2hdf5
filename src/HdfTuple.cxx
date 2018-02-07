@@ -22,6 +22,10 @@ H5::DataType get_type<unsigned int>() {
   return H5::PredType::NATIVE_UINT;
 }
 template<>
+H5::DataType get_type<unsigned char>() {
+  return H5::PredType::NATIVE_UCHAR;
+}
+template<>
 H5::DataType get_type<double>() {
   return H5::PredType::NATIVE_DOUBLE;
 }
