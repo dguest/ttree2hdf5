@@ -60,7 +60,7 @@ template<> bool& get_ref<bool>(data_buffer_t& buf) {
 
 
 
-namespace {
+namespace H5Utils {
 
   // packing utility
   H5::CompType packed(H5::CompType in) {
@@ -128,104 +128,14 @@ DSParameters::DSParameters(const H5::CompType type_,
                            hsize_t batch_size_):
   type(type_),
   max_length(max_length_),
-  dim_stride(getStriding(max_length_)),
+  dim_stride(H5Utils::getStriding(max_length_)),
   batch_size(batch_size_)
 {
 }
-
-std::vector<size_t> WriterXd::NONE = {};
-
-WriterXd::WriterXd(H5::Group& group, const std::string& name,
-                   VariableFillers fillers,
-                   std::vector<hsize_t> max_length,
-                   hsize_t batch_size):
-  _pars(build_type(fillers), max_length, batch_size),
-  _offset(0),
-  _fillers(fillers)
-{
-  if (batch_size < 1) {
-    throw std::logic_error("batch size must be > 0");
-  }
-  // create space
-  H5::DataSpace space = getUnlimitedSpace(max_length);
-
-  // create params
-  H5::DSetCreatPropList params = getChunckedDatasetParams(
-    max_length, batch_size);
-
-  // create ds
-  throwIfExists(name, group);
-  _ds = group.createDataSet(name, packed(_pars.type), space, params);
-}
-
-WriterXd::~WriterXd() {
-  try {
-    flush();
-  } catch (H5::Exception& err) {
-    print_destructor_error(err.getDetailMsg());
-  } catch (std::exception& err) {
-    print_destructor_error(err.what());
-  }
-}
-
-void WriterXd::fill_while_incrementing(std::vector<size_t>& indices) {
-  if (buffer_size() == _pars.batch_size) {
-    flush();
-  }
-  indices.resize(_pars.max_length.size());
-
-  // build buffer and _then_ insert it so that exceptions don't leave
-  // the buffer in a weird state
-  std::vector<data_buffer_t> temp;
-
-  std::fill(indices.begin(), indices.end(), 0);
-  for (size_t gidx = 0; gidx < _pars.dim_stride.front(); gidx++) {
-
-    // we might be able to make this more efficient and less cryptic
-    for (size_t iii = 0; iii < indices.size(); iii++) {
-      indices.at(iii) = (
-        gidx % _pars.dim_stride.at(iii)) / _pars.dim_stride.at(iii+1);
-    }
-
-    for (const auto& filler: _fillers) {
-      temp.push_back(filler->get_buffer());
-    }
-  }
-  _buffer.insert(_buffer.end(), temp.begin(), temp.end());
-}
-void WriterXd::flush() {
-  if (buffer_size() == 0) return;
-  // extend the ds
-  std::vector<hsize_t> slab_dims{buffer_size()};
-  slab_dims.insert(slab_dims.end(),
-                   _pars.max_length.begin(),
-                   _pars.max_length.end());
-  std::vector<hsize_t> total_dims{buffer_size() + _offset};
-  total_dims.insert(total_dims.end(),
-                    _pars.max_length.begin(),
-                    _pars.max_length.end());
-  _ds.extend(total_dims.data());
-
-  // setup dataspaces
-  H5::DataSpace file_space = _ds.getSpace();
-  H5::DataSpace mem_space(slab_dims.size(), slab_dims.data());
-  std::vector<hsize_t> offset_dims{_offset};
-  offset_dims.resize(slab_dims.size(), 0);
-  file_space.selectHyperslab(H5S_SELECT_SET,
-                             slab_dims.data(), offset_dims.data());
-
-  // write out
-  assert(static_cast<size_t>(file_space.getSelectNpoints())
-         == _buffer.size() / _fillers.size());
-  _ds.write(_buffer.data(), _pars.type, mem_space, file_space);
-  _offset += buffer_size();
-  _buffer.clear();
-}
-
-hsize_t WriterXd::buffer_size() const {
-  assert(_fillers.size() == _pars.type.getNmembers());
-  size_t n_entries = _buffer.size() / _fillers.size();
-  assert(n_entries % _pars.dim_stride.front() == 0);
-  return n_entries / _pars.dim_stride.front();
+hsize_t DSParameters::buffer_size(const std::vector<data_buffer_t>& buf)
+  const {
+  size_t n_entries = buf.size() / this->type.getNmembers();
+  assert(n_entries % this->dim_stride.front() == 0);
+  return n_entries / this->dim_stride.front();
 }
 
