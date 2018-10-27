@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
   WriterXd<> writer2(file, "thing2", vars, {10}, 256);
 
   VariableFillers<int> argvars;
-  argvars.add("argthing", std::function<int(int)>([](int x) {return x;}));
+  argvars.add<float>("argthing", [](int x) {return x;});
   WriterXd<int> writer3(file, "thing3", argvars, {10});
 
   // fill file

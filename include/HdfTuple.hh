@@ -136,8 +136,6 @@ public:
   void add(const std::string& name, const F func) {
     add(name, std::function<T(I...)>(func));
   }
-  // template <typename T>
-  // void add(const std::string& name, const std::function<T()>&);
 };
 
 template <typename... I>
@@ -146,11 +144,6 @@ void VariableFillers<I...>::add(const std::string& name,
                           const std::function<T(I...)>& fun) {
   this->push_back(std::make_shared<VariableFiller<T, I...> >(name, fun));
 }
-// template <typename T>
-// void VariableFillers::add(const std::string& name,
-//                           const std::function<T()>& fun) {
-//   this->push_back(std::make_shared<VariableFiller<T> >(name, fun));
-// }
 
 
 
@@ -224,6 +217,7 @@ private:
   std::vector<data_buffer_t> _buffer;
   VariableFillers<I...> _fillers;
   H5::DataSet _ds;
+  H5::DataSpace _file_space;
 };
 
 
@@ -237,7 +231,8 @@ WriterXd<I...>::WriterXd(H5::Group& group, const std::string& name,
                    hsize_t batch_size):
   _pars(H5Utils::build_type(fillers), max_length, batch_size),
   _offset(0),
-  _fillers(fillers)
+  _fillers(fillers),
+  _file_space(H5S_SIMPLE)
 {
   using namespace H5Utils;
   if (batch_size < 1) {
@@ -253,6 +248,8 @@ WriterXd<I...>::WriterXd(H5::Group& group, const std::string& name,
   // create ds
   throwIfExists(name, group);
   _ds = group.createDataSet(name, packed(_pars.type), space, params);
+  _file_space = _ds.getSpace();
+  _file_space.selectNone();
 }
 
 template <typename... I>
@@ -292,6 +289,17 @@ void WriterXd<I...>::fill_while_incrementing(std::vector<size_t>& indices,
       temp.push_back(filler->get_buffer(args...));
     }
   }
+
+  // add these elements to the file space
+  std::vector<hsize_t> slab_dims{1};
+  slab_dims.insert(slab_dims.end(),
+                   _pars.max_length.begin(),
+                   _pars.max_length.end());
+  std::vector<hsize_t> offset_dims{_offset + _pars.buffer_size(_buffer)};
+  offset_dims.resize(slab_dims.size(), 0);
+  _file_space.selectHyperslab(H5S_SELECT_OR,
+                              slab_dims.data(), offset_dims.data());
+
   _buffer.insert(_buffer.end(), temp.begin(), temp.end());
 }
 
@@ -299,6 +307,7 @@ template <typename... I>
 void WriterXd<I...>::flush() {
   const hsize_t buffer_size = _pars.buffer_size(_buffer);
   if (buffer_size == 0) return;
+
   // extend the ds
   std::vector<hsize_t> slab_dims{buffer_size};
   slab_dims.insert(slab_dims.end(),
@@ -309,21 +318,16 @@ void WriterXd<I...>::flush() {
                     _pars.max_length.begin(),
                     _pars.max_length.end());
   _ds.extend(total_dims.data());
-
-  // setup dataspaces
-  H5::DataSpace file_space = _ds.getSpace();
-  H5::DataSpace mem_space(slab_dims.size(), slab_dims.data());
-  std::vector<hsize_t> offset_dims{_offset};
-  offset_dims.resize(slab_dims.size(), 0);
-  file_space.selectHyperslab(H5S_SELECT_SET,
-                             slab_dims.data(), offset_dims.data());
+  _file_space.setExtentSimple(total_dims.size(), total_dims.data());
 
   // write out
-  assert(static_cast<size_t>(file_space.getSelectNpoints())
+  assert(static_cast<size_t>(_file_space.getSelectNpoints())
          == _buffer.size() / _fillers.size());
-  _ds.write(_buffer.data(), _pars.type, mem_space, file_space);
+  H5::DataSpace mem_space(slab_dims.size(), slab_dims.data());
+  _ds.write(_buffer.data(), _pars.type, mem_space, _file_space);
   _offset += buffer_size;
   _buffer.clear();
+  _file_space.selectNone();
 }
 
 #endif
