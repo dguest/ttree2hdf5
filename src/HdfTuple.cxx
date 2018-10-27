@@ -70,15 +70,6 @@ namespace H5Utils {
     out.pack();
     return out;
   }
-  H5::CompType build_type(const VariableFillers& fillers) {
-    H5::CompType type(fillers.size() * sizeof(data_buffer_t));
-    size_t dt_offset = 0;
-    for (const auto& filler: fillers) {
-      type.insertMember(filler->name(), dt_offset, filler->get_type());
-      dt_offset += sizeof(data_buffer_t);
-    }
-    return type;
-  }
 
   void print_destructor_error(const std::string& msg) {
     std::cerr << "ERROR: an exception was thrown in the destructor of an "

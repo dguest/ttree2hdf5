@@ -69,18 +69,19 @@ T& get_ref(data_buffer_t& buf) {
 // strongly typed HDF5 writer.
 
 // variable filler class header
+template <typename... I>
 class IVariableFiller
 {
 public:
   virtual ~IVariableFiller() {}
-  virtual data_buffer_t get_buffer() const = 0;
+  virtual data_buffer_t get_buffer(I...) const = 0;
   virtual H5::DataType get_type() const = 0;
   virtual std::string name() const = 0;
 };
 
 // implementation for variable filler
 template <typename T, typename... I>
-class VariableFiller: public IVariableFiller
+class VariableFiller: public IVariableFiller<I...>
 {
 public:
   VariableFiller(const std::string&, const std::function<T(I...)>&);
@@ -124,14 +125,14 @@ std::string VariableFiller<T, I...>::name() const {
 // buffers you want to read from.
 //
 // For examples, see `copy_root_tree.cxx`
-
-class VariableFillers: public std::vector<std::shared_ptr<IVariableFiller> >
+template <typename... I>
+class VariableFillers: public std::vector<std::shared_ptr<IVariableFiller<I...> > >
 {
 public:
   // This should be the only method you need in this class
-  template <typename T, typename... I>
+  template <typename T>
   void add(const std::string& name, const std::function<T(I...)>&);
-  template <typename T, typename... I, typename F>
+  template <typename T, typename F>
   void add(const std::string& name, const F func) {
     add(name, std::function<T(I...)>(func));
   }
@@ -139,8 +140,9 @@ public:
   // void add(const std::string& name, const std::function<T()>&);
 };
 
-template <typename T, typename... I>
-void VariableFillers::add(const std::string& name,
+template <typename... I>
+template <typename T>
+void VariableFillers<I...>::add(const std::string& name,
                           const std::function<T(I...)>& fun) {
   this->push_back(std::make_shared<VariableFiller<T, I...> >(name, fun));
 }
@@ -168,7 +170,18 @@ namespace H5Utils {
 
   // packing utility
   H5::CompType packed(H5::CompType in);
-  H5::CompType build_type(const VariableFillers& fillers);
+
+  template<typename... I>
+  H5::CompType build_type(const VariableFillers<I...>& fillers) {
+    H5::CompType type(fillers.size() * sizeof(data_buffer_t));
+    size_t dt_offset = 0;
+    for (const auto& filler: fillers) {
+      type.insertMember(filler->name(), dt_offset, filler->get_type());
+      dt_offset += sizeof(data_buffer_t);
+    }
+    return type;
+  }
+
   void print_destructor_error(const std::string& msg);
 
   // new functions
@@ -195,20 +208,21 @@ template <typename... I>
 class WriterXd {
 public:
   WriterXd(H5::Group& group, const std::string& name,
-           VariableFillers fillers,
+           VariableFillers<I...> fillers,
            std::vector<hsize_t> dataset_dimensions,
            hsize_t chunk_size = 2048);
   WriterXd(const WriterXd&) = delete;
   WriterXd& operator=(WriterXd&) = delete;
   ~WriterXd();
-  void fill_while_incrementing(std::vector<size_t>& indices = WriterXd::NONE);
+  void fill_while_incrementing(std::vector<size_t>& indices = WriterXd::NONE,
+                               I... args);
   void flush();
 private:
   static std::vector<size_t> NONE;
   const DSParameters _pars;
   hsize_t _offset;
   std::vector<data_buffer_t> _buffer;
-  VariableFillers _fillers;
+  VariableFillers<I...> _fillers;
   H5::DataSet _ds;
 };
 
@@ -218,7 +232,7 @@ std::vector<size_t> WriterXd<I...>::NONE = {};
 
 template <typename... I>
 WriterXd<I...>::WriterXd(H5::Group& group, const std::string& name,
-                   VariableFillers fillers,
+                         VariableFillers<I...> fillers,
                    std::vector<hsize_t> max_length,
                    hsize_t batch_size):
   _pars(H5Utils::build_type(fillers), max_length, batch_size),
@@ -254,7 +268,8 @@ WriterXd<I...>::~WriterXd() {
 }
 
 template <typename... I>
-void WriterXd<I...>::fill_while_incrementing(std::vector<size_t>& indices) {
+void WriterXd<I...>::fill_while_incrementing(std::vector<size_t>& indices,
+                                             I... args) {
   if (_pars.buffer_size(_buffer) == _pars.batch_size) {
     flush();
   }
@@ -274,7 +289,7 @@ void WriterXd<I...>::fill_while_incrementing(std::vector<size_t>& indices) {
     }
 
     for (const auto& filler: _fillers) {
-      temp.push_back(filler->get_buffer());
+      temp.push_back(filler->get_buffer(args...));
     }
   }
   _buffer.insert(_buffer.end(), temp.begin(), temp.end());

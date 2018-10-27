@@ -3,7 +3,7 @@
 int main(int argc, char* argv[]) {
 
   // build the variables
-  VariableFillers vars;
+  VariableFillers<> vars;
   size_t xxx = 0;
   std::vector<size_t> iii(1,0);
   vars.add<int>("bob", [&xxx, &iii](){return xxx + iii.at(0);});
@@ -18,10 +18,15 @@ int main(int argc, char* argv[]) {
   WriterXd<> writer(file, "thing", vars, {}, 256);
   WriterXd<> writer2(file, "thing2", vars, {10}, 256);
 
+  VariableFillers<int> argvars;
+  argvars.add("argthing", std::function<int(int)>([](int x) {return x;}));
+  WriterXd<int> writer3(file, "thing3", argvars, {10});
+
   // fill file
   for (; xxx < 1000; xxx++) {
     writer.fill_while_incrementing();
     writer2.fill_while_incrementing(iii);
+    writer3.fill_while_incrementing(iii, xxx);
   }
   writer.flush();
   writer2.flush();
