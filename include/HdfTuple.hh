@@ -156,6 +156,16 @@ void VariableFillers::add(const std::string& name,
 // iterate over all possible values of `indices` and call the filler
 // functions.
 
+struct DSParameters {
+  DSParameters(const H5::CompType type,
+               std::vector<hsize_t> max_length,
+               hsize_t batch_size);
+  H5::CompType type;
+  std::vector<hsize_t> max_length;
+  std::vector<hsize_t> dim_stride;
+  hsize_t batch_size;
+};
+
 class WriterXd {
 public:
   WriterXd(H5::Group& group, const std::string& name,
@@ -170,10 +180,7 @@ public:
 private:
   static std::vector<size_t> NONE;
   hsize_t buffer_size() const;
-  H5::CompType _type;
-  std::vector<hsize_t> _max_length;
-  std::vector<hsize_t> _dim_stride;
-  hsize_t _batch_size;
+  const DSParameters _pars;
   hsize_t _offset;
   std::vector<data_buffer_t> _buffer;
   VariableFillers _fillers;

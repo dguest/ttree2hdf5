@@ -97,6 +97,9 @@ if( BUILTIN_HDF5 )
   add_dependencies(HdfTuple-static HDF5)
 endif()
 
+add_executable(ttree2hdf5-tests src/ttree2hdf5-tests.cxx )
+target_link_libraries(ttree2hdf5-tests HdfTuple-static)
+
 install( DIRECTORY include/ DESTINATION include)
 
 # set the RPATH so that libraries don't get lost
