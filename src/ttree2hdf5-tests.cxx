@@ -4,33 +4,17 @@
 
 int main(int argc, char* argv[]) {
 
-  // build the variables
-  VariableFillers<> vars;
-  size_t xxx = 0;
-  std::array<size_t,1> iii;
-  vars.add<int>("bob", [&xxx, &iii](){return xxx + iii.at(0);});
-  vars.add<float>("alice", [&xxx, &iii]() {return xxx*0.5 + iii.at(0);});
-  vars.add<double>("alice2", [&xxx, &iii](){return xxx*0.5 / (iii.at(0) + 1);});
-  vars.add<bool>("bool",     [&xxx, &iii](){return (xxx + iii.at(0)) % 2;});
-
   // make the output file
-  H5::H5File file("test.h5", H5F_ACC_TRUNC);
-
-  // create the writers
-  WriterXd<0> writer(file, "thing", vars, std::array<size_t,0>{}, 256);
-  WriterXd<1> writer2(file, "thing2", vars, {{10}}, 256);
-
+  H5::H5File file("test-new.h5", H5F_ACC_TRUNC);
+  // build the variables
   VariableFillers<int> argvars;
   argvars.add<float>("argthing", [](int x) {return x;}, NAN);
-  WriterXd<2,int> writer3(file, "thing3", argvars, {{4, 4}});
+  WriterXd<2,int> writer(file, "thing3", argvars, {{4, 4}});
 
   // fill file
-  for (; xxx < 1000; xxx++) {
-    writer.fill_while_incrementing();
-    writer2.fill_while_incrementing(iii);
-    writer3.fill<std::vector<std::vector<int> > >({{-1, -2, -3}, {1, 2, 3}});
+  for (int xxx = 0; xxx < 10000; xxx++) {
+    writer.fill<std::vector<std::vector<int> > >(
+      {{-1 * xxx, -2 * xxx, -3 * xxx}, {1, xxx / 2, 3*xxx}, {xxx}});
   }
-  writer.flush();
-  writer2.flush();
   return 0;
 }
