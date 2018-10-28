@@ -175,6 +175,11 @@ namespace H5Utils {
     return type;
   }
 
+  template <size_t N>
+  std::vector<hsize_t> vec(std::array<hsize_t,N> a) {
+    return std::vector<hsize_t>(a.begin(),a.end());
+  }
+
   void print_destructor_error(const std::string& msg);
 
   // new functions
@@ -197,21 +202,21 @@ struct DSParameters {
   hsize_t batch_size;
 };
 
-template <typename... I>
+template <size_t N, typename... I>
 class WriterXd {
 public:
   WriterXd(H5::Group& group, const std::string& name,
            VariableFillers<I...> fillers,
-           std::vector<hsize_t> dataset_dimensions,
+           std::array<hsize_t, N> dataset_dimensions,
            hsize_t chunk_size = 2048);
   WriterXd(const WriterXd&) = delete;
   WriterXd& operator=(WriterXd&) = delete;
   ~WriterXd();
-  void fill_while_incrementing(std::vector<size_t>& indices = WriterXd::NONE,
+  void fill_while_incrementing(std::array<size_t, N>& indices = WriterXd::NONE,
                                I... args);
   void flush();
 private:
-  static std::vector<size_t> NONE;
+  static std::array<size_t,N> NONE;
   const DSParameters _pars;
   hsize_t _offset;
   std::vector<data_buffer_t> _buffer;
@@ -221,15 +226,15 @@ private:
 };
 
 
-template <typename... I>
-std::vector<size_t> WriterXd<I...>::NONE = {};
+template <size_t N, typename... I>
+std::array<size_t, N> WriterXd<N, I...>::NONE;
 
-template <typename... I>
-WriterXd<I...>::WriterXd(H5::Group& group, const std::string& name,
-                         VariableFillers<I...> fillers,
-                   std::vector<hsize_t> max_length,
-                   hsize_t batch_size):
-  _pars(H5Utils::build_type(fillers), max_length, batch_size),
+template <size_t N, typename... I>
+WriterXd<N, I...>::WriterXd(H5::Group& group, const std::string& name,
+                            VariableFillers<I...> fillers,
+                            std::array<hsize_t,N> max_length,
+                            hsize_t batch_size):
+  _pars(H5Utils::build_type(fillers), H5Utils::vec(max_length), batch_size),
   _offset(0),
   _fillers(fillers),
   _file_space(H5S_SIMPLE)
@@ -239,11 +244,11 @@ WriterXd<I...>::WriterXd(H5::Group& group, const std::string& name,
     throw std::logic_error("batch size must be > 0");
   }
   // create space
-  H5::DataSpace space = getUnlimitedSpace(max_length);
+  H5::DataSpace space = getUnlimitedSpace(vec(max_length));
 
   // create params
   H5::DSetCreatPropList params = getChunckedDatasetParams(
-    max_length, batch_size);
+    vec(max_length), batch_size);
 
   // create ds
   throwIfExists(name, group);
@@ -252,8 +257,8 @@ WriterXd<I...>::WriterXd(H5::Group& group, const std::string& name,
   _file_space.selectNone();
 }
 
-template <typename... I>
-WriterXd<I...>::~WriterXd() {
+template <size_t N, typename... I>
+WriterXd<N, I...>::~WriterXd() {
   using namespace H5Utils;
   try {
     flush();
@@ -264,13 +269,12 @@ WriterXd<I...>::~WriterXd() {
   }
 }
 
-template <typename... I>
-void WriterXd<I...>::fill_while_incrementing(std::vector<size_t>& indices,
-                                             I... args) {
+template <size_t N, typename... I>
+void WriterXd<N, I...>::fill_while_incrementing(std::array<size_t,N>& indices,
+                                                I... args) {
   if (_pars.buffer_size(_buffer) == _pars.batch_size) {
     flush();
   }
-  indices.resize(_pars.max_length.size());
 
   // build buffer and _then_ insert it so that exceptions don't leave
   // the buffer in a weird state
@@ -303,8 +307,8 @@ void WriterXd<I...>::fill_while_incrementing(std::vector<size_t>& indices,
   _buffer.insert(_buffer.end(), temp.begin(), temp.end());
 }
 
-template <typename... I>
-void WriterXd<I...>::flush() {
+template <size_t N, typename... I>
+void WriterXd<N, I...>::flush() {
   const hsize_t buffer_size = _pars.buffer_size(_buffer);
   if (buffer_size == 0) return;
 
