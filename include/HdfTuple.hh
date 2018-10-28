@@ -75,6 +75,7 @@ class IVariableFiller
 public:
   virtual ~IVariableFiller() {}
   virtual data_buffer_t get_buffer(I...) const = 0;
+  virtual data_buffer_t get_default() const = 0;
   virtual H5::DataType get_type() const = 0;
   virtual std::string name() const = 0;
 };
@@ -84,19 +85,25 @@ template <typename T, typename... I>
 class VariableFiller: public IVariableFiller<I...>
 {
 public:
-  VariableFiller(const std::string&, const std::function<T(I...)>&);
+  VariableFiller(const std::string&,
+                 const std::function<T(I...)>&,
+                 const T default_value = T());
   data_buffer_t get_buffer(I...) const;
+  data_buffer_t get_default() const;
   H5::DataType get_type() const;
   std::string name() const;
 private:
   std::function<T(I...)> _getter;
   std::string _name;
+  T _default_value;
 };
 template <typename T, typename... I>
 VariableFiller<T, I...>::VariableFiller(const std::string& name,
-                                  const std::function<T(I...)>& func):
+                                        const std::function<T(I...)>& func,
+                                        const T default_value):
   _getter(func),
-  _name(name)
+  _name(name),
+  _default_value(default_value)
 {
 }
 template <typename T, typename... I>
@@ -104,6 +111,12 @@ data_buffer_t VariableFiller<T, I...>::get_buffer(I... args) const {
   data_buffer_t buffer;
   get_ref<T>(buffer) = _getter(args...);
   return buffer;
+}
+template <typename T, typename... I>
+data_buffer_t VariableFiller<T, I...>::get_default() const {
+  data_buffer_t default_value;
+  get_ref<T>(default_value) = _default_value;
+  return default_value;
 }
 template <typename T, typename... I>
 H5::DataType VariableFiller<T, I...>::get_type() const {
@@ -174,9 +187,17 @@ namespace H5Utils {
     }
     return type;
   }
+  template<typename... I>
+  std::vector<data_buffer_t> build_default(const VariableFillers<I...>& f) {
+    std::vector<data_buffer_t> def;
+    for (const auto& filler: f) {
+      def.push_back(filler->get_default());
+    }
+    return def;
+  }
 
   template <size_t N>
-  std::vector<hsize_t> vec(std::array<hsize_t,N> a) {
+  std::vector<hsize_t> vec(std::array<size_t,N> a) {
     return std::vector<hsize_t>(a.begin(),a.end());
   }
 
@@ -186,7 +207,9 @@ namespace H5Utils {
   H5::DataSpace getUnlimitedSpace(const std::vector<hsize_t>& max_length);
   H5::DSetCreatPropList getChunckedDatasetParams(
     const std::vector<hsize_t>& max_length,
-    hsize_t batch_size);
+    hsize_t batch_size,
+    const H5::CompType&,
+    const std::vector<data_buffer_t>& default_value);
   std::vector<hsize_t> getStriding(std::vector<hsize_t> max_length);
   void throwIfExists(const std::string& name, const H5::Group& in_group);
 }
@@ -206,13 +229,13 @@ template <size_t N, typename... I>
 class WriterXd {
 public:
   WriterXd(H5::Group& group, const std::string& name,
-           VariableFillers<I...> fillers,
-           std::array<hsize_t, N> dataset_dimensions,
+           const VariableFillers<I...>& fillers,
+           const std::array<size_t, N>& dataset_dimensions,
            hsize_t chunk_size = 2048);
   WriterXd(const WriterXd&) = delete;
   WriterXd& operator=(WriterXd&) = delete;
   ~WriterXd();
-  void fill_while_incrementing(std::array<size_t, N>& indices = WriterXd::NONE,
+  void fill_while_incrementing(std::array<size_t, N>& idx = WriterXd::NONE,
                                I... args);
   void flush();
 private:
@@ -231,8 +254,8 @@ std::array<size_t, N> WriterXd<N, I...>::NONE;
 
 template <size_t N, typename... I>
 WriterXd<N, I...>::WriterXd(H5::Group& group, const std::string& name,
-                            VariableFillers<I...> fillers,
-                            std::array<hsize_t,N> max_length,
+                            const VariableFillers<I...>& fillers,
+                            const std::array<size_t,N>& max_length,
                             hsize_t batch_size):
   _pars(H5Utils::build_type(fillers), H5Utils::vec(max_length), batch_size),
   _offset(0),
@@ -248,7 +271,7 @@ WriterXd<N, I...>::WriterXd(H5::Group& group, const std::string& name,
 
   // create params
   H5::DSetCreatPropList params = getChunckedDatasetParams(
-    vec(max_length), batch_size);
+    vec(max_length), batch_size, _pars.type, H5Utils::build_default(fillers));
 
   // create ds
   throwIfExists(name, group);
