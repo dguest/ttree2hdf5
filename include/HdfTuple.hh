@@ -144,18 +144,22 @@ class VariableFillers: public std::vector<std::shared_ptr<IVariableFiller<I...> 
 public:
   // This should be the only method you need in this class
   template <typename T>
-  void add(const std::string& name, const std::function<T(I...)>&);
+  void add(const std::string& name, const std::function<T(I...)>&,
+           const T& default_value = T());
   template <typename T, typename F>
-  void add(const std::string& name, const F func) {
-    add(name, std::function<T(I...)>(func));
+  void add(const std::string& name, const F func, const T& def = T()) {
+    add(name, std::function<T(I...)>(func), def);
   }
 };
 
 template <typename... I>
 template <typename T>
 void VariableFillers<I...>::add(const std::string& name,
-                          const std::function<T(I...)>& fun) {
-  this->push_back(std::make_shared<VariableFiller<T, I...> >(name, fun));
+                                const std::function<T(I...)>& fun,
+                                const T& default_value)
+{
+  this->push_back(
+    std::make_shared<VariableFiller<T, I...> >(name, fun, default_value));
 }
 
 
@@ -187,6 +191,7 @@ namespace H5Utils {
     }
     return type;
   }
+
   template<typename... I>
   std::vector<data_buffer_t> build_default(const VariableFillers<I...>& f) {
     std::vector<data_buffer_t> def;
@@ -195,6 +200,43 @@ namespace H5Utils {
     }
     return def;
   }
+
+  template <size_t N, typename T, typename... I>
+  struct DataFlattener {
+    std::vector<data_buffer_t> buffer;
+    std::vector<std::array<hsize_t, N> > element_offsets;
+    DataFlattener(const VariableFillers<I...>& f,T args):
+      buffer() {
+      hsize_t offset = 0;
+      for (const auto& arg: args) {
+        // FIXME: avoid the value_type here, could probably do that by
+        // getting rid of the I and making the arguments implicet
+        DataFlattener<N-1, typename T::value_type, I...> internal(f, arg);
+        buffer.insert(buffer.end(),
+                      internal.buffer.begin(),
+                      internal.buffer.end());
+        for (const auto& in_ele: internal.element_offsets){
+          std::array<hsize_t, N> element_pos;
+          element_pos.at(0) = offset;
+          std::copy(in_ele.begin(), in_ele.end(), element_pos.begin() + 1);
+          element_offsets.push_back(element_pos);
+        }
+        offset++;
+      }
+    }
+  };
+  template <typename T, typename... I>
+  struct DataFlattener<0, T, I...> {
+    std::vector<data_buffer_t> buffer;
+    std::vector<std::array<hsize_t, 0> > element_offsets;
+    DataFlattener(const VariableFillers<I...>& f, T args):
+      buffer(),
+      element_offsets(1) {
+      for (const auto& filler: f) {
+        buffer.push_back(filler->get_buffer(args));
+      }
+    }
+  };
 
   template <size_t N>
   std::vector<hsize_t> vec(std::array<size_t,N> a) {
@@ -218,7 +260,6 @@ struct DSParameters {
   DSParameters(const H5::CompType type,
                std::vector<hsize_t> max_length,
                hsize_t batch_size);
-  hsize_t buffer_size(const std::vector<data_buffer_t>&) const;
   H5::CompType type;
   std::vector<hsize_t> max_length;
   std::vector<hsize_t> dim_stride;
@@ -235,6 +276,8 @@ public:
   WriterXd(const WriterXd&) = delete;
   WriterXd& operator=(WriterXd&) = delete;
   ~WriterXd();
+  template <typename T>
+  void fill(T);
   void fill_while_incrementing(std::array<size_t, N>& idx = WriterXd::NONE,
                                I... args);
   void flush();
@@ -242,6 +285,7 @@ private:
   static std::array<size_t,N> NONE;
   const DSParameters _pars;
   hsize_t _offset;
+  hsize_t _buffer_rows;
   std::vector<data_buffer_t> _buffer;
   VariableFillers<I...> _fillers;
   H5::DataSet _ds;
@@ -259,6 +303,7 @@ WriterXd<N, I...>::WriterXd(H5::Group& group, const std::string& name,
                             hsize_t batch_size):
   _pars(H5Utils::build_type(fillers), H5Utils::vec(max_length), batch_size),
   _offset(0),
+  _buffer_rows(0),
   _fillers(fillers),
   _file_space(H5S_SIMPLE)
 {
@@ -293,9 +338,29 @@ WriterXd<N, I...>::~WriterXd() {
 }
 
 template <size_t N, typename... I>
+template <typename T>
+void WriterXd<N, I...>::fill(T arg) {
+  if (_buffer_rows == _pars.batch_size) {
+    flush();
+  }
+  H5Utils::DataFlattener<N, T, I...> buf(_fillers, arg);
+  hsize_t n_elements = buf.element_offsets.size();
+  std::vector<hsize_t> elements;
+  for (const auto& el_local: buf.element_offsets) {
+    std::array<hsize_t, N+1> el_global;
+    el_global.at(0) = _offset + _buffer_rows;
+    std::copy(el_local.begin(), el_local.end(), el_global.begin() + 1);
+    elements.insert(elements.end(), el_global.begin(), el_global.end());
+  }
+  _file_space.selectElements(H5S_SELECT_APPEND, n_elements, elements.data());
+  _buffer.insert(_buffer.end(), buf.buffer.begin(), buf.buffer.end());
+  _buffer_rows++;
+}
+
+template <size_t N, typename... I>
 void WriterXd<N, I...>::fill_while_incrementing(std::array<size_t,N>& indices,
                                                 I... args) {
-  if (_pars.buffer_size(_buffer) == _pars.batch_size) {
+  if (_buffer_rows == _pars.batch_size) {
     flush();
   }
 
@@ -322,24 +387,21 @@ void WriterXd<N, I...>::fill_while_incrementing(std::array<size_t,N>& indices,
   slab_dims.insert(slab_dims.end(),
                    _pars.max_length.begin(),
                    _pars.max_length.end());
-  std::vector<hsize_t> offset_dims{_offset + _pars.buffer_size(_buffer)};
+  std::vector<hsize_t> offset_dims{_offset + _buffer_rows};
   offset_dims.resize(slab_dims.size(), 0);
   _file_space.selectHyperslab(H5S_SELECT_OR,
                               slab_dims.data(), offset_dims.data());
 
   _buffer.insert(_buffer.end(), temp.begin(), temp.end());
+  _buffer_rows++;
 }
 
 template <size_t N, typename... I>
 void WriterXd<N, I...>::flush() {
-  const hsize_t buffer_size = _pars.buffer_size(_buffer);
+  const hsize_t buffer_size = _buffer_rows;
   if (buffer_size == 0) return;
 
   // extend the ds
-  std::vector<hsize_t> slab_dims{buffer_size};
-  slab_dims.insert(slab_dims.end(),
-                   _pars.max_length.begin(),
-                   _pars.max_length.end());
   std::vector<hsize_t> total_dims{buffer_size + _offset};
   total_dims.insert(total_dims.end(),
                     _pars.max_length.begin(),
@@ -348,12 +410,13 @@ void WriterXd<N, I...>::flush() {
   _file_space.setExtentSimple(total_dims.size(), total_dims.data());
 
   // write out
-  assert(static_cast<size_t>(_file_space.getSelectNpoints())
-         == _buffer.size() / _fillers.size());
-  H5::DataSpace mem_space(slab_dims.size(), slab_dims.data());
+  hsize_t n_buffer_pts = _buffer.size() / _fillers.size();
+  assert(_file_space.getSelectNpoints() == n_buffer_pts);
+  H5::DataSpace mem_space(1, &n_buffer_pts);
   _ds.write(_buffer.data(), _pars.type, mem_space, _file_space);
   _offset += buffer_size;
   _buffer.clear();
+  _buffer_rows = 0;
   _file_space.selectNone();
 }
 

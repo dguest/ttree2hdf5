@@ -126,10 +126,4 @@ DSParameters::DSParameters(const H5::CompType type_,
   batch_size(batch_size_)
 {
 }
-hsize_t DSParameters::buffer_size(const std::vector<data_buffer_t>& buf)
-  const {
-  size_t n_entries = buf.size() / this->type.getNmembers();
-  assert(n_entries % this->dim_stride.front() == 0);
-  return n_entries / this->dim_stride.front();
-}
 

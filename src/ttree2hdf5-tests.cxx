@@ -1,5 +1,6 @@
 #include "HdfTuple.hh"
 #include <array>
+#include <cmath>
 
 int main(int argc, char* argv[]) {
 
@@ -20,14 +21,14 @@ int main(int argc, char* argv[]) {
   WriterXd<1> writer2(file, "thing2", vars, {{10}}, 256);
 
   VariableFillers<int> argvars;
-  argvars.add<float>("argthing", [](int x) {return x;});
-  WriterXd<1,int> writer3(file, "thing3", argvars, {{10}});
+  argvars.add<float>("argthing", [](int x) {return x;}, NAN);
+  WriterXd<2,int> writer3(file, "thing3", argvars, {{4, 4}});
 
   // fill file
   for (; xxx < 1000; xxx++) {
     writer.fill_while_incrementing();
     writer2.fill_while_incrementing(iii);
-    writer3.fill_while_incrementing(iii, xxx);
+    writer3.fill<std::vector<std::vector<int> > >({{-1, -2, -3}, {1, 2, 3}});
   }
   writer.flush();
   writer2.flush();
