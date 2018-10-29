@@ -26,43 +26,39 @@ union data_buffer_t
   bool _bool;
 };
 
-// _____________________________________________________________________
-// internal classes
-//
-// We have lots of code to get around HDF5's rather weak typing. These
-// templates are defined in the cxx file.
-
-template <typename T> H5::DataType get_type();
-template<> H5::DataType get_type<int>();
-template<> H5::DataType get_type<long long>();
-template<> H5::DataType get_type<unsigned int>();
-template<> H5::DataType get_type<unsigned char>();
-template<> H5::DataType get_type<float>();
-template<> H5::DataType get_type<double>();
-template<> H5::DataType get_type<bool>();
-
-// check to make sure one of the above specializations is used
-template<typename T>
-H5::DataType get_type() {
-  static_assert(sizeof(T) != sizeof(T), "you must override this class");
-  return H5::DataType();
-}
 
 template <typename T>
-T& get_ref(data_buffer_t& buf);
-template<> int& get_ref<int>(data_buffer_t& buf);
-template<> long long& get_ref<long long>(data_buffer_t& buf);
-template<> unsigned int& get_ref<unsigned int>(data_buffer_t& buf);
-template<> float& get_ref<float>(data_buffer_t& buf);
-template<> double& get_ref<double>(data_buffer_t& buf);
-template<> bool& get_ref<bool>(data_buffer_t& buf);
-
-// check to make sure one of the above specializations is used
-template <typename T>
-T& get_ref(data_buffer_t& buf) {
-  static_assert(sizeof(T) != sizeof(T), "you must override this class");
-  return T();
-}
+struct H5Traits {
+  static T& ref(data_buffer_t& buf) = 0;
+};
+template <> struct H5Traits<int> {
+  static const H5::DataType type;
+  static int& ref(data_buffer_t& buf) { return buf._int; }
+};
+template <> struct H5Traits<long long> {
+  static const H5::DataType type;
+  static long long& ref(data_buffer_t& buf) { return buf._llong; }
+};
+template <> struct H5Traits<unsigned int> {
+  static const H5::DataType type;
+  static unsigned int& ref(data_buffer_t& buf) { return buf._uint; }
+};
+template <> struct H5Traits<unsigned char> {
+  static const H5::DataType type;
+  static unsigned char& ref(data_buffer_t& buf) { return buf._uchar; }
+};
+template <> struct H5Traits<float> {
+  static const H5::DataType type;
+  static float& ref(data_buffer_t& buf) { return buf._float; }
+};
+template <> struct H5Traits<double> {
+  static const H5::DataType type;
+  static double& ref(data_buffer_t& buf) { return buf._double; }
+};
+template <> struct H5Traits<bool> {
+  static const H5::DataType type;
+  static bool& ref(data_buffer_t& buf) { return buf._bool; }
+};
 
 // This is used to buld the unions we use to build the hdf5 memory
 // buffer. Together with the `get_type` templates it gives us a
@@ -109,18 +105,18 @@ VariableFiller<T, I>::VariableFiller(const std::string& name,
 template <typename T, typename I>
 data_buffer_t VariableFiller<T, I>::get_buffer(I args) const {
   data_buffer_t buffer;
-  get_ref<T>(buffer) = _getter(args);
+  H5Traits<T>::ref(buffer) = _getter(args);
   return buffer;
 }
 template <typename T, typename I>
 data_buffer_t VariableFiller<T, I>::get_default() const {
   data_buffer_t default_value;
-  get_ref<T>(default_value) = _default_value;
+  H5Traits<T>::ref(default_value) = _default_value;
   return default_value;
 }
 template <typename T, typename I>
 H5::DataType VariableFiller<T, I>::get_type() const {
-  return ::get_type<T>();
+  return H5Traits<T>::type;
 }
 template <typename T, typename I>
 std::string VariableFiller<T, I>::name() const {
@@ -260,12 +256,20 @@ struct DSParameters {
   hsize_t batch_size;
 };
 
+// helper for default constructor argument
+template <size_t N>
+std::array<size_t, N> uniform(size_t val) {
+  std::array<size_t, N> ar;
+  ar.fill(val);
+  return ar;
+}
+
 template <size_t N, typename I>
 class WriterXd {
 public:
   WriterXd(H5::Group& group, const std::string& name,
            const VariableFillers<I>& fillers,
-           const std::array<size_t, N>& dataset_dimensions,
+           const std::array<size_t, N>& dimensions = uniform<N>(5),
            hsize_t chunk_size = 2048);
   WriterXd(const WriterXd&) = delete;
   WriterXd& operator=(WriterXd&) = delete;

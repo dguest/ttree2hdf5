@@ -5,32 +5,18 @@
 #include <cassert>
 #include <iostream>             // for printing errors in the destructor
 
-template<>
-H5::DataType get_type<float>() {
-  return H5::PredType::NATIVE_FLOAT;
-}
-template<>
-H5::DataType get_type<int>() {
-  return H5::PredType::NATIVE_INT;
-}
-template<>
-H5::DataType get_type<long long>() {
-  return H5::PredType::NATIVE_LLONG;
-}
-template<>
-H5::DataType get_type<unsigned int>() {
-  return H5::PredType::NATIVE_UINT;
-}
-template<>
-H5::DataType get_type<unsigned char>() {
-  return H5::PredType::NATIVE_UCHAR;
-}
-template<>
-H5::DataType get_type<double>() {
-  return H5::PredType::NATIVE_DOUBLE;
-}
-template<>
-H5::DataType get_type<bool>() {
+H5::DataType get_bool_type();
+
+const H5::DataType H5Traits<int>::type = H5::PredType::NATIVE_INT;
+const H5::DataType H5Traits<long long>::type = H5::PredType::NATIVE_LLONG;
+const H5::DataType H5Traits<unsigned int>::type = H5::PredType::NATIVE_UINT;
+const H5::DataType H5Traits<unsigned char>::type = H5::PredType::NATIVE_UCHAR;
+const H5::DataType H5Traits<float>::type = H5::PredType::NATIVE_FLOAT;
+const H5::DataType H5Traits<double>::type = H5::PredType::NATIVE_DOUBLE;
+const H5::DataType H5Traits<bool>::type = get_bool_type();
+
+// bool is a special case
+H5::DataType get_bool_type() {
   bool TRUE = true;
   bool FALSE = false;
   H5::EnumType btype(sizeof(bool));
@@ -38,27 +24,6 @@ H5::DataType get_type<bool>() {
   btype.insert("FALSE", &FALSE);
   return btype;
 }
-
-template<> int& get_ref<int>(data_buffer_t& buf) {
-  return buf._int;
-}
-template<> long long& get_ref<long long>(data_buffer_t& buf) {
-  return buf._llong;
-}
-template<> unsigned int& get_ref<unsigned int>(data_buffer_t& buf) {
-  return buf._uint;
-}
-template<> float& get_ref<float>(data_buffer_t& buf) {
-  return buf._float;
-}
-template<> double& get_ref<double>(data_buffer_t& buf) {
-  return buf._double;
-}
-template<> bool& get_ref<bool>(data_buffer_t& buf) {
-  return buf._bool;
-}
-
-
 
 namespace H5Utils {
 
