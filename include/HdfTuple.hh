@@ -48,29 +48,29 @@ namespace H5Utils {
       H5::DataType get_type() const;
       std::string name() const;
     private:
-      std::function<T(I)> _getter;
-      std::string _name;
-      T _default_value;
+      std::function<T(I)> m_getter;
+      std::string m_name;
+      T m_default_value;
     };
     template <typename T, typename I>
     DataConsumer<T, I>::DataConsumer(const std::string& name,
                                      const std::function<T(I)>& func,
                                      const T default_value):
-      _getter(func),
-      _name(name),
-      _default_value(default_value)
+      m_getter(func),
+      m_name(name),
+      m_default_value(default_value)
     {
     }
     template <typename T, typename I>
     data_buffer_t DataConsumer<T, I>::get_buffer(I args) const {
       data_buffer_t buffer;
-      H5Traits<T>::ref(buffer) = _getter(args);
+      H5Traits<T>::ref(buffer) = m_getter(args);
       return buffer;
     }
     template <typename T, typename I>
     data_buffer_t DataConsumer<T, I>::get_default() const {
       data_buffer_t default_value;
-      H5Traits<T>::ref(default_value) = _default_value;
+      H5Traits<T>::ref(default_value) = m_default_value;
       return default_value;
     }
     template <typename T, typename I>
@@ -79,7 +79,7 @@ namespace H5Utils {
     }
     template <typename T, typename I>
     std::string DataConsumer<T, I>::name() const {
-      return _name;
+      return m_name;
     }
   }
 
@@ -221,14 +221,13 @@ namespace H5Utils {
     void fill(T);
     void flush();
   private:
-    static std::array<size_t,N> NONE;
-    const internal::DSParameters _pars;
-    hsize_t _offset;
-    hsize_t _buffer_rows;
-    std::vector<internal::data_buffer_t> _buffer;
-    Consumers<I> _fillers;
-    H5::DataSet _ds;
-    H5::DataSpace _file_space;
+    const internal::DSParameters m_par;
+    hsize_t m_offset;
+    hsize_t m_buffer_rows;
+    std::vector<internal::data_buffer_t> m_buffer;
+    Consumers<I> m_consumers;
+    H5::DataSet m_ds;
+    H5::DataSpace m_file_space;
   };
 
   template <size_t N, typename I>
@@ -236,11 +235,11 @@ namespace H5Utils {
                        const Consumers<I>& con,
                        const std::array<size_t,N>& extent,
                        hsize_t batch_size):
-    _pars(internal::build_type(con), internal::vec(extent), batch_size),
-    _offset(0),
-    _buffer_rows(0),
-    _fillers(con),
-    _file_space(H5S_SIMPLE)
+    m_par(internal::build_type(con), internal::vec(extent), batch_size),
+    m_offset(0),
+    m_buffer_rows(0),
+    m_consumers(con),
+    m_file_space(H5S_SIMPLE)
   {
     using namespace internal;
     if (batch_size < 1) {
@@ -251,13 +250,13 @@ namespace H5Utils {
 
     // create params
     H5::DSetCreatPropList params = getChunckedDatasetParams(
-      vec(extent), batch_size, _pars.type, build_default(con));
+      vec(extent), batch_size, m_par.type, build_default(con));
 
     // create ds
     throwIfExists(name, group);
-    _ds = group.createDataSet(name, packed(_pars.type), space, params);
-    _file_space = _ds.getSpace();
-    _file_space.selectNone();
+    m_ds = group.createDataSet(name, packed(m_par.type), space, params);
+    m_file_space = m_ds.getSpace();
+    m_file_space.selectNone();
   }
 
   template <size_t N, typename I>
@@ -275,45 +274,45 @@ namespace H5Utils {
   template <size_t N, typename I>
   template <typename T>
   void Writer<N, I>::fill(T arg) {
-    if (_buffer_rows == _pars.batch_size) {
+    if (m_buffer_rows == m_par.batch_size) {
       flush();
     }
-    internal::DataFlattener<N, decltype(_fillers), T> buf(_fillers, arg);
-    hsize_t n_elements = buf.element_offsets.size();
+    internal::DataFlattener<N, decltype(m_consumers), T> buf(m_consumers, arg);
+    hsize_t n_el = buf.element_offsets.size();
     std::vector<hsize_t> elements;
     for (const auto& el_local: buf.element_offsets) {
       std::array<hsize_t, N+1> el_global;
-      el_global.at(0) = _offset + _buffer_rows;
+      el_global[0] = m_offset + m_buffer_rows;
       std::copy(el_local.begin(), el_local.end(), el_global.begin() + 1);
       elements.insert(elements.end(), el_global.begin(), el_global.end());
     }
-    _file_space.selectElements(H5S_SELECT_APPEND, n_elements, elements.data());
-    _buffer.insert(_buffer.end(), buf.buffer.begin(), buf.buffer.end());
-    _buffer_rows++;
+    m_file_space.selectElements(H5S_SELECT_APPEND, n_el, elements.data());
+    m_buffer.insert(m_buffer.end(), buf.buffer.begin(), buf.buffer.end());
+    m_buffer_rows++;
   }
 
   template <size_t N, typename I>
   void Writer<N, I>::flush() {
-    const hsize_t buffer_size = _buffer_rows;
+    const hsize_t buffer_size = m_buffer_rows;
     if (buffer_size == 0) return;
 
     // extend the ds
-    std::vector<hsize_t> total_dims{buffer_size + _offset};
+    std::vector<hsize_t> total_dims{buffer_size + m_offset};
     total_dims.insert(total_dims.end(),
-                      _pars.extent.begin(),
-                      _pars.extent.end());
-    _ds.extend(total_dims.data());
-    _file_space.setExtentSimple(total_dims.size(), total_dims.data());
+                      m_par.extent.begin(),
+                      m_par.extent.end());
+    m_ds.extend(total_dims.data());
+    m_file_space.setExtentSimple(total_dims.size(), total_dims.data());
 
     // write out
-    hsize_t n_buffer_pts = _buffer.size() / _fillers.size();
-    assert(_file_space.getSelectNpoints() == n_buffer_pts);
+    hsize_t n_buffer_pts = m_buffer.size() / m_consumers.size();
+    assert(m_file_space.getSelectNpoints() == n_buffer_pts);
     H5::DataSpace mem_space(1, &n_buffer_pts);
-    _ds.write(_buffer.data(), _pars.type, mem_space, _file_space);
-    _offset += buffer_size;
-    _buffer.clear();
-    _buffer_rows = 0;
-    _file_space.selectNone();
+    m_ds.write(m_buffer.data(), m_par.type, mem_space, m_file_space);
+    m_offset += buffer_size;
+    m_buffer.clear();
+    m_buffer_rows = 0;
+    m_file_space.selectNone();
   }
 
 }
