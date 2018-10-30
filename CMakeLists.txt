@@ -82,7 +82,7 @@ if( BUILD_SHARED_HDFTUPLE )
   add_library(HdfTuple-shared SHARED src/common.cxx src/H5Traits.cxx)
   target_link_libraries(HdfTuple-shared ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
   target_include_directories(HdfTuple-shared
-    PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+    PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS} .)
   install(TARGETS HdfTuple-shared LIBRARY DESTINATION lib)
   if( BUILTIN_HDF5 )
     add_dependencies(HdfTuple-shared HDF5)
@@ -91,7 +91,7 @@ endif()
 add_library(HdfTuple-static STATIC src/common.cxx src/H5Traits.cxx)
 target_link_libraries(HdfTuple-static ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
 target_include_directories(HdfTuple-static
-  PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
+  PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS} .)
 install( TARGETS HdfTuple-static ARCHIVE DESTINATION lib )
 if( BUILTIN_HDF5 )
   add_dependencies(HdfTuple-static HDF5)
@@ -99,6 +99,7 @@ endif()
 
 add_executable(ttree2hdf5-tests src/ttree2hdf5-tests.cxx )
 target_link_libraries(ttree2hdf5-tests HdfTuple-static)
+target_include_directories(ttree2hdf5-tests PRIVATE .)
 
 install( DIRECTORY include/ DESTINATION include)
 
