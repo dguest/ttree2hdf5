@@ -79,7 +79,7 @@ include_directories(BEFORE SYSTEM ${HDF5_INCLUDE_DIRS})
 #
 option(BUILD_SHARED_HDFTUPLE "Build shared library for hdf5 tuple" OFF)
 if( BUILD_SHARED_HDFTUPLE )
-  add_library(HdfTuple-shared SHARED src/HdfTuple.cxx)
+  add_library(HdfTuple-shared SHARED src/common.cxx src/H5Traits.cxx)
   target_link_libraries(HdfTuple-shared ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
   target_include_directories(HdfTuple-shared
     PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
@@ -88,7 +88,7 @@ if( BUILD_SHARED_HDFTUPLE )
     add_dependencies(HdfTuple-shared HDF5)
   endif()
 endif()
-add_library(HdfTuple-static STATIC src/HdfTuple.cxx)
+add_library(HdfTuple-static STATIC src/common.cxx src/H5Traits.cxx)
 target_link_libraries(HdfTuple-static ${HDF5_LIBRARIES} ${ZLIB_LIBRARIES})
 target_include_directories(HdfTuple-static
   PRIVATE ${HDF5_INCLUDE_DIRS} ${ZLIB_INCLUDE_DIRS})
