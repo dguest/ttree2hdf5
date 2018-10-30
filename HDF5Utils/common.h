@@ -31,7 +31,7 @@ namespace H5Utils {
 
     // writer error handling
     void throwIfExists(const std::string& name, const H5::Group& in_group);
-    void print_destructor_error(const std::string& msg);
+    void printDistructorError(const std::string& msg);
 
     // constant parameters used by the writer
     struct DSParameters {

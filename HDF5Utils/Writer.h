@@ -29,9 +29,9 @@ namespace H5Utils {
     {
     public:
       virtual ~IDataConsumer() {}
-      virtual data_buffer_t get_buffer(I) const = 0;
-      virtual data_buffer_t get_default() const = 0;
-      virtual H5::DataType get_type() const = 0;
+      virtual data_buffer_t getBuffer(I) const = 0;
+      virtual data_buffer_t getDefault() const = 0;
+      virtual H5::DataType getType() const = 0;
       virtual std::string name() const = 0;
     };
 
@@ -43,9 +43,9 @@ namespace H5Utils {
       DataConsumer(const std::string&,
                    const std::function<T(I)>&,
                    const T default_value = T());
-      data_buffer_t get_buffer(I) const;
-      data_buffer_t get_default() const;
-      H5::DataType get_type() const;
+      data_buffer_t getBuffer(I) const;
+      data_buffer_t getDefault() const;
+      H5::DataType getType() const;
       std::string name() const;
     private:
       std::function<T(I)> m_getter;
@@ -62,19 +62,19 @@ namespace H5Utils {
     {
     }
     template <typename T, typename I>
-    data_buffer_t DataConsumer<T, I>::get_buffer(I args) const {
+    data_buffer_t DataConsumer<T, I>::getBuffer(I args) const {
       data_buffer_t buffer;
       H5Traits<T>::ref(buffer) = m_getter(args);
       return buffer;
     }
     template <typename T, typename I>
-    data_buffer_t DataConsumer<T, I>::get_default() const {
+    data_buffer_t DataConsumer<T, I>::getDefault() const {
       data_buffer_t default_value;
       H5Traits<T>::ref(default_value) = m_default_value;
       return default_value;
     }
     template <typename T, typename I>
-    H5::DataType DataConsumer<T, I>::get_type() const {
+    H5::DataType DataConsumer<T, I>::getType() const {
       return H5Traits<T>::type;
     }
     template <typename T, typename I>
@@ -152,7 +152,7 @@ namespace H5Utils {
         buffer(),
         element_offsets(1) {
         for (const auto& filler: f) {
-          buffer.push_back(filler->get_buffer(args));
+          buffer.push_back(filler->getBuffer(args));
         }
       }
     };
@@ -162,20 +162,20 @@ namespace H5Utils {
     // needed by the writer.
     //
     template<typename I>
-    H5::CompType build_type(const Consumers<I>& fillers) {
+    H5::CompType buildType(const Consumers<I>& fillers) {
       H5::CompType type(fillers.size() * sizeof(data_buffer_t));
       size_t dt_offset = 0;
       for (const auto& filler: fillers) {
-        type.insertMember(filler->name(), dt_offset, filler->get_type());
+        type.insertMember(filler->name(), dt_offset, filler->getType());
         dt_offset += sizeof(data_buffer_t);
       }
       return type;
     }
     template<typename I>
-    std::vector<data_buffer_t> build_default(const Consumers<I>& f) {
+    std::vector<data_buffer_t> buildDefault(const Consumers<I>& f) {
       std::vector<data_buffer_t> def;
       for (const auto& filler: f) {
-        def.push_back(filler->get_default());
+        def.push_back(filler->getDefault());
       }
       return def;
     }
@@ -235,7 +235,7 @@ namespace H5Utils {
                        const Consumers<I>& con,
                        const std::array<size_t,N>& extent,
                        hsize_t batch_size):
-    m_par(internal::build_type(con), internal::vec(extent), batch_size),
+    m_par(internal::buildType(con), internal::vec(extent), batch_size),
     m_offset(0),
     m_buffer_rows(0),
     m_consumers(con),
@@ -250,7 +250,7 @@ namespace H5Utils {
 
     // create params
     H5::DSetCreatPropList params = getChunckedDatasetParams(
-      vec(extent), batch_size, m_par.type, build_default(con));
+      vec(extent), batch_size, m_par.type, buildDefault(con));
 
     // create ds
     throwIfExists(name, group);
@@ -265,9 +265,9 @@ namespace H5Utils {
     try {
       flush();
     } catch (H5::Exception& err) {
-      internal::print_destructor_error(err.getDetailMsg());
+      internal::printDistructorError(err.getDetailMsg());
     } catch (std::exception& err) {
-      internal::print_destructor_error(err.what());
+      internal::printDistructorError(err.what());
     }
   }
 
