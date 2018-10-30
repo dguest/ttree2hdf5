@@ -220,6 +220,7 @@ namespace H5Utils {
     template <typename T>
     void fill(T);
     void flush();
+    size_t index() const;
   private:
     const internal::DSParameters m_par;
     hsize_t m_offset;
@@ -314,6 +315,12 @@ namespace H5Utils {
     m_buffer_rows = 0;
     m_file_space.selectNone();
   }
+
+  template <size_t N, typename I>
+  size_t Writer<N, I>::index() const {
+    return m_buffer_rows + m_offset;
+  }
+
 
 }
 
